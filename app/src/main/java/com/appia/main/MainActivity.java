@@ -1,8 +1,10 @@
-package com.appia.bioland;
+package com.appia.main;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+
+import com.appia.bioland.R;
 
 public class MainActivity extends AppCompatActivity {
 
