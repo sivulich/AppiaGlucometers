@@ -1,7 +1,10 @@
 package com.appia.bioland;
 
+import java.math.BigInteger;
+import java.nio.Buffer;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.List;
 
 public class Comunicator {
     // TODO: Remove this from here
@@ -23,6 +26,26 @@ public class Comunicator {
 
     }
 
+    static public class IllegalLengthException extends Exception{
+        String error;
+
+        public String toString() {
+            return "IllegalLength[" + error + "]";
+        }
+        IllegalLengthException(String s){
+            error = s;
+        }
+    }
+    static public class IllegalContentException extends Exception{
+        String error;
+
+        public String toString() {
+            return "IllegalContent[" + error + "]";
+        }
+        IllegalContentException(String s){
+            error = s;
+        }
+    }
 
     static public class V1Protocol{
         private SerialComunicator serial;
@@ -68,7 +91,11 @@ public class Comunicator {
                 min = (byte) now.get(Calendar.MINUTE);
                 second = (byte) now.get(Calendar.SECOND);
                 checksum = new byte[3];
-                checksum[0] = (byte)(startCode + packetLength + packetCategory + year + month + day + hour + min + second);
+                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + year + month + day + hour + min + second));
+                byte[] check = big.toByteArray();
+                checksum[0] = check[0];
+                checksum[1] = check[1];
+                checksum[2] = check[2];
             }
         }
         static public class AppTerminationPacket extends AppPacket{
@@ -83,9 +110,14 @@ public class Comunicator {
                 min = (byte) now.get(Calendar.MINUTE);
                 second = (byte) now.get(Calendar.SECOND);
                 checksum = new byte[3];
-                checksum[0] = (byte)(startCode + packetLength + packetCategory + year + month + day + hour + min + second);
+                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + year + month + day + hour + min + second));
+                byte[] check = big.toByteArray();
+                checksum[0] = check[0];
+                checksum[1] = check[1];
+                checksum[2] = check[2];
             }
         }
+
         static public class InfoPacket{
             byte startCode;
             byte packetLength;
@@ -100,12 +132,22 @@ public class Comunicator {
             byte[] serialNumber;
             byte[] checksum;
 
-            public InfoPacket(byte[] raw){
+            public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
                 if (raw.length != 16)
-                    throw new IllegalArgumentException("Packet length must be 16");
+                    throw new IllegalLengthException("Packet length must be 16");
+
                 startCode = raw[0];
+                if (startCode != 0x55)
+                    throw new IllegalContentException("StartCode must be 0x55");
+
                 packetLength = raw[1];
+                if (packetLength != 0x10)
+                    throw new IllegalContentException("PacketLength must be 0x10");
+
                 packetCategory = raw[2];
+                if (packetCategory != 0x00)
+                    throw new IllegalContentException("PacketCategory must be 0x00");
+
                 versionCode = raw[3];
                 clientCode = raw[4];
                 modelCode = raw[5];
@@ -118,11 +160,21 @@ public class Comunicator {
                 serialNumber[1] = raw[11];
                 serialNumber[2] = raw[12];
                 checksum = new byte[3];
+
                 checksum[0] = raw[13];
                 checksum[1] = raw[14];
                 checksum[2] = raw[15];
+                BigInteger serial = new BigInteger(serialNumber);
+                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + versionCode + clientCode + modelCode + typeCode + userID + productionYear + productionMonth));
+                big = big.add(serial);
+                BigInteger check = new BigInteger(checksum);
+                if(!big.equals(check))
+                    throw new IllegalContentException("Checksum Does Not Match");
+
+
             }
         }
+
         static public class ResultPacket{
             byte startCode;
             byte packetLength;
@@ -136,12 +188,21 @@ public class Comunicator {
             byte[] glucose;
             byte[] checksum;
 
-            public ResultPacket(byte[] raw){
+            public ResultPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
                 if (raw.length != 14)
-                    throw new IllegalArgumentException("Packet length must be 14");
+                    throw new IllegalLengthException("Packet length must be 14");
                 startCode = raw[0];
+                if (startCode != 0x55)
+                    throw new IllegalContentException("StartCode must be 0x55");
+
                 packetLength = raw[1];
+                if (packetLength != 0x0E)
+                    throw new IllegalContentException("PacketLength must be 0x0E");
+
                 packetCategory = raw[2];
+                if (packetCategory != 0x03)
+                    throw new IllegalContentException("PacketCategory must be 0x03");
+
                 year = raw[3];
                 month = raw[4];
                 day = raw[5];
@@ -155,24 +216,56 @@ public class Comunicator {
                 checksum[0] = raw[11];
                 checksum[1] = raw[12];
                 checksum[2] = raw[13];
+
+                BigInteger measurement = new BigInteger(glucose);
+                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + year + month + day + hour + min + save ));
+                big = big.add(measurement);
+                BigInteger check = new BigInteger(checksum);
+                if(!big.equals(check))
+                    throw new IllegalContentException("Checksum Does Not Match");
             }
         }
+
         static public class EndPacket{
             byte startCode;
             byte packetLength;
             byte packetCategory;
             byte[] checksum;
 
-            public EndPacket(byte[] raw){
+            public EndPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
                 if (raw.length != 6)
-                    throw new IllegalArgumentException("Packet length must be 6");
+                    throw new IllegalLengthException("Packet length must be 6");
                 startCode = raw[0];
+                if (startCode != 0x55)
+                    throw new IllegalContentException("StartCode must be 0x55");
+
                 packetLength = raw[1];
+                if (packetLength != 0x06)
+                    throw new IllegalContentException("PacketLength must be 0x06");
+
                 packetCategory = raw[2];
+                if (packetCategory != 0x04)
+                    throw new IllegalContentException("PacketCategory must be 0x04");
                 checksum = new byte[3];
                 checksum[0] = raw[3];
                 checksum[1] = raw[4];
                 checksum[2] = raw[5];
+
+                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory));
+                BigInteger check = new BigInteger(checksum);
+                if(!big.equals(check))
+                    throw new IllegalContentException("Checksum Does Not Match");
+            }
+        }
+
+        static public class Communication{
+            InfoPacket infoPacket;
+            List<ResultPacket> resultPackets;
+            EndPacket endPacket;
+            String error;
+
+            public boolean valid(){
+                return (infoPacket!=null && resultPackets !=null && endPacket!= null);
             }
         }
 
@@ -181,6 +274,42 @@ public class Comunicator {
             comm.connect();
         }
 
+        public Communication communicate(){
+            if (!serial.connected){
+                serial.connect();
+            }
+            if(!serial.connected)
+                return new Communication();
+            Communication comm = new Communication();
+            Calendar calendar = Calendar.getInstance();
+            AppReplyPacket appReplyPacket = new AppReplyPacket(calendar);
+            serial.send(appReplyPacket.to_bytes());
+            byte[] reply = serial.recieve();
+            try{
+                comm.infoPacket = new InfoPacket(reply);
+            }catch (IllegalLengthException | IllegalContentException e){
+                comm.error = e.toString();
+                return comm;
+            }
+            comm.resultPackets = new ArrayList<ResultPacket>();
+            while(true){
+                appReplyPacket = new AppReplyPacket(calendar);
+                serial.send(appReplyPacket.to_bytes());
+                reply = serial.recieve();
+                try{
+                    comm.resultPackets.add(new ResultPacket(reply));
+
+                }catch (IllegalLengthException | IllegalContentException e){
+                    try {
+                        comm.endPacket = new EndPacket(reply);
+                        return comm;
+                    } catch (IllegalLengthException | IllegalContentException k){
+                        comm.error = k.toString();
+                        return comm;
+                    }
+                }
+            }
+        }
 
 
     }
