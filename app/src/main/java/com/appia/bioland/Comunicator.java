@@ -3,6 +3,7 @@ package com.appia.bioland;
 import java.math.BigInteger;
 import java.nio.Buffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -93,9 +94,14 @@ public class Comunicator {
                 checksum = new byte[3];
                 BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + year + month + day + hour + min + second));
                 byte[] check = big.toByteArray();
-                checksum[0] = check[0];
-                checksum[1] = check[1];
-                checksum[2] = check[2];
+                for(int i=0; i< 3; i++)
+                {
+                    if (i< check.length)
+                        checksum[i] = check[i];
+                    else
+                        checksum[i] = 0x00;
+                }
+
             }
         }
         static public class AppTerminationPacket extends AppPacket{
@@ -155,21 +161,26 @@ public class Comunicator {
                 userID = raw[7];
                 productionYear = raw[8];
                 productionMonth = raw[9];
+
                 serialNumber = new byte[3];
                 serialNumber[0] = raw[10];
                 serialNumber[1] = raw[11];
                 serialNumber[2] = raw[12];
-                checksum = new byte[3];
 
+                checksum = new byte[3];
                 checksum[0] = raw[13];
                 checksum[1] = raw[14];
                 checksum[2] = raw[15];
-                BigInteger serial = new BigInteger(serialNumber);
-                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + versionCode + clientCode + modelCode + typeCode + userID + productionYear + productionMonth));
-                big = big.add(serial);
-                BigInteger check = new BigInteger(checksum);
-                if(!big.equals(check))
+                int serial =  (int)(serialNumber[0]&0xff) + (int)((serialNumber[1]&0xff)<<8) + (int)((serialNumber[2]&0xff)<<16) ;
+                int big = (int) (startCode &0xff) +
+                        (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (versionCode&0xff) +
+                        (int) (clientCode&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) + (int) (userID&0xff) +
+                        (int) (productionYear&0xff) + (int) (productionMonth&0xff);
+                big += serial;
+                int check = (int) (checksum[0]&0xff) + (int) ((checksum[1]&0xff)<<8) + (int) ((checksum[2]&0xff)<<16);
+                if(big != check)
                     throw new IllegalContentException("Checksum Does Not Match");
+
 
 
             }
@@ -217,11 +228,16 @@ public class Comunicator {
                 checksum[1] = raw[12];
                 checksum[2] = raw[13];
 
-                BigInteger measurement = new BigInteger(glucose);
-                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory + year + month + day + hour + min + save ));
-                big = big.add(measurement);
-                BigInteger check = new BigInteger(checksum);
-                if(!big.equals(check))
+
+                int measurement = (int)(glucose[0]&0xff) + (int)((glucose[1]&0xff)<<8) + (int)((glucose[2]&0xff)<<16);
+                int big = (int) (startCode &0xff) +
+                          (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (year&0xff) +
+                          (int) (month&0xff) + (int) (day&0xff) + (int) (hour&0xff) + (int) (min&0xff) +
+                          (int) (save&0xff);
+                big += measurement;
+                int check = (int) (checksum[0]&0xff) + (int) ((checksum[1]&0xff)<<8) + (int) ((checksum[2]&0xff)<<16);
+
+                if( big!=check )
                     throw new IllegalContentException("Checksum Does Not Match");
             }
         }
@@ -251,9 +267,11 @@ public class Comunicator {
                 checksum[1] = raw[4];
                 checksum[2] = raw[5];
 
-                BigInteger big = BigInteger.valueOf((startCode + packetLength + packetCategory));
-                BigInteger check = new BigInteger(checksum);
-                if(!big.equals(check))
+                int big = (int) (startCode &0xff) +
+                        (int) (packetLength&0xff) + (int) (packetCategory&0xff);
+                int check = (int) (checksum[0]&0xff) + (int) ((checksum[1]&0xff)<<8) + (int) ((checksum[2]&0xff)<<16);
+
+                if( big!=check )
                     throw new IllegalContentException("Checksum Does Not Match");
             }
         }
