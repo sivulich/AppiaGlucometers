@@ -1,15 +1,14 @@
 package com.appia.bioland;
 
 import org.junit.Test;
-import com.appia.bioland.Comunicator.SerialComunicator;
-import com.appia.bioland.Comunicator.V1Protocol;
+import com.appia.bioland.protocols.SerialCommunicator;
+import com.appia.bioland.protocols.ProtocolV1;
 
-import java.util.Calendar;
 
 import static org.junit.Assert.*;
 
 public class ComunicatorV1Test {
-    public class SerialComunicatorTester extends SerialComunicator{
+    public class SerialCommunicatorTester extends SerialCommunicator{
         int status = 0;
 
         @Override
@@ -19,18 +18,29 @@ public class ComunicatorV1Test {
 
         @Override
         public boolean send(byte[] data){
-            if (status == 0){
-                assertEquals(data[0], (byte)0x5A);
-                assertEquals(data[1], (byte)0x0B);
-                assertEquals(data[2], (byte)0x05);
-                status+=1;
-            }
+//            if (status == 0){
+            assertEquals(data[0], (byte)0x5A);
+            assertEquals(data[1], (byte)0x0B);
+            assertEquals(data[2], (byte)0x05);
+//                status+=1;
+//            }
             return true;
         }
         @Override
         public byte[] recieve(){
-            if (status ==1){
+            if (status ==0){
                 byte[] packet = {(byte)0x55, (byte)0x10, (byte)0x00, (byte)0x01, (byte)0x02, (byte)0x03, (byte)0x04, (byte)0x05, (byte)0x06, (byte)0x07, (byte)0x11, (byte)0x22, (byte)0x33, (byte)0x92, (byte)0x22, (byte)0x33};
+                status +=1;
+                return packet;
+            }
+            else if (status == 1 || status == 2 || status == 3 ){
+                byte[] packet = {(byte)0x55, (byte)0x0e, (byte)0x03, (byte)0x01, (byte)0x02, (byte)0x03, (byte)0x04, (byte)0x05, (byte)0x00, (byte)0x11, (byte)0x22, (byte)0x86, (byte)0x22, (byte)0x00};
+                status +=1;
+                return packet;
+            }
+            else if (status== 4){
+                byte[] packet = {(byte)0x55, (byte)0x06, (byte)0x04, (byte)0x5F, (byte)0x00, (byte)0x00};
+                status +=1;
                 return packet;
             }
             return new byte[16];
@@ -38,10 +48,12 @@ public class ComunicatorV1Test {
     }
 
     @Test
-    public void protocolIsCorrect() {
-        SerialComunicatorTester ser = new SerialComunicatorTester();
-        V1Protocol protocol = new V1Protocol(ser);
-        V1Protocol.Communication comm = protocol.communicate();
+    public void protocolV1IsCorrect() {
+        SerialCommunicatorTester ser = new SerialCommunicatorTester();
+        ProtocolV1 protocol = new ProtocolV1(ser);
+        ProtocolV1.Communication comm = protocol.communicate();
         assertNotEquals(comm.infoPacket, null);
+        assertEquals(comm.resultPackets.size(), 3);
+        assertNotEquals(comm.endPacket, null);
     }
 }
