@@ -1,11 +1,10 @@
 package com.appia.bioland.protocols;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class ProtocolV2 extends Protocol{
+public class ProtocolV31 extends Protocol {
     private SerialCommunicator serial;
 
     static public class Communication{
@@ -46,6 +45,7 @@ public class ProtocolV2 extends Protocol{
             return packet;
         }
     }
+
     static public class AppInfoPacket extends AppPacket{
         public AppInfoPacket(Calendar now){
             startCode = 0x5A;
@@ -64,6 +64,7 @@ public class ProtocolV2 extends Protocol{
             checksum = (byte)(big&0xff);
         }
     }
+
     static public class AppDataPacket extends AppPacket{
         public AppDataPacket(Calendar now){
             startCode = 0x5A;
@@ -94,6 +95,7 @@ public class ProtocolV2 extends Protocol{
         byte retainByte;
         byte batteryCapacity;
         byte[] rollingCode;
+        byte[] serialNumber;
         byte checksum;
 
         public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
@@ -229,7 +231,7 @@ public class ProtocolV2 extends Protocol{
 
 
 
-    public ProtocolV2(SerialCommunicator comm){
+    public ProtocolV31(SerialCommunicator comm){
         serial = comm;
         comm.connect();
     }
