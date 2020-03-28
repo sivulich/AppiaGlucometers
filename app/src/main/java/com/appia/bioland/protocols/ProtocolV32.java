@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class ProtocolV31 extends Protocol {
+public class ProtocolV32 extends Protocol {
     private SerialCommunicator serial;
 
     static public class Communication{
@@ -104,24 +104,23 @@ public class ProtocolV31 extends Protocol {
         byte packetCategory;
         byte versionCode;
         byte clientCode;
+        byte batteryCapacity;
         byte modelCode;
         byte typeCode;
-        byte retain;
-        byte batteryCapacity;
-        byte[] rollingCode;
+        byte[] seriesNumber;
         byte checksum;
 
         public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
-            if (raw.length != 15)
-                throw new IllegalLengthException("Packet length must be 15");
+            if (raw.length != 18)
+                throw new IllegalLengthException("Packet length must be 18");
 
             startCode = raw[0];
             if (startCode != 0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
 
             packetLength = raw[1];
-            if (packetLength != 0x0F)
-                throw new IllegalContentException("PacketLength must be 0x0F");
+            if (packetLength != 0x12)
+                throw new IllegalContentException("PacketLength must be 0x12");
 
             packetCategory = raw[2];
             if (packetCategory != 0x00)
@@ -129,23 +128,29 @@ public class ProtocolV31 extends Protocol {
 
             versionCode = raw[3];
             clientCode = raw[4];
-            modelCode = raw[5];
-            typeCode = raw[6];
-            retain = raw[7];
-            batteryCapacity = raw[8];
-            rollingCode = new byte[5];
-            rollingCode[0] = raw[9];
-            rollingCode[1] = raw[10];
-            rollingCode[2] = raw[11];
-            rollingCode[3] = raw[12];
-            rollingCode[4] = raw[13];
+            batteryCapacity = raw[5];
+            modelCode = raw[6];
+            typeCode = raw[7];
+            seriesNumber = new byte[9];
+            seriesNumber[0] = raw[8];
+            seriesNumber[1] = raw[9];
+            seriesNumber[2] = raw[10];
+            seriesNumber[3] = raw[11];
+            seriesNumber[4] = raw[12];
+            seriesNumber[5] = raw[13];
+            seriesNumber[6] = raw[14];
+            seriesNumber[7] = raw[15];
+            seriesNumber[8] = raw[16];
 
-            checksum = raw[14];
+            checksum = raw[17];
             int big = (int) (startCode &0xff) +
                     (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (versionCode&0xff) +
-                    (int) (clientCode&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) + (int) (retain&0xff) +
-                    (int) (batteryCapacity&0xff) + (int) (rollingCode[0]&0xff) + (int) (rollingCode[1]&0xff) +
-                    (int) (rollingCode[2]&0xff) + (int) (rollingCode[3]&0xff) + (int) (rollingCode[4]&0xff) + 2;
+                    (int) (clientCode&0xff) + (int) (batteryCapacity&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) +
+                    (int) (seriesNumber[0]&0xff) + (int) (seriesNumber[1]&0xff) +
+                    (int) (seriesNumber[2]&0xff) + (int) (seriesNumber[3]&0xff) +
+                    (int) (seriesNumber[4]&0xff) + (int) (seriesNumber[5]&0xff) +
+                    (int) (seriesNumber[6]&0xff) + (int) (seriesNumber[7]&0xff) +
+                    (int) (seriesNumber[8]&0xff) + 2;
             //Double check for inconsistency in documentation
             if( !((big&0xff) == (int)(checksum&0xff) || ((big-2)&0xff) == (int)(checksum&0xff)))
                 throw new IllegalContentException("Checksum Does Not Match");
@@ -282,7 +287,7 @@ public class ProtocolV31 extends Protocol {
 
 
 
-    public ProtocolV31(SerialCommunicator comm){
+    public ProtocolV32(SerialCommunicator comm){
         serial = comm;
         comm.connect();
     }

@@ -91,7 +91,7 @@ public class ProtocolV2 extends Protocol{
         byte clientCode;
         byte modelCode;
         byte typeCode;
-        byte retainByte;
+        byte retain;
         byte batteryCapacity;
         byte[] rollingCode;
         byte checksum;
@@ -116,7 +116,7 @@ public class ProtocolV2 extends Protocol{
             clientCode = raw[4];
             modelCode = raw[5];
             typeCode = raw[6];
-            retainByte = raw[7];
+            retain = raw[7];
             batteryCapacity = raw[8];
             rollingCode = new byte[5];
             rollingCode[0] = raw[9];
@@ -128,7 +128,7 @@ public class ProtocolV2 extends Protocol{
             checksum = raw[14];
             int big = (int) (startCode &0xff) +
                     (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (versionCode&0xff) +
-                    (int) (clientCode&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) + (int) (retainByte&0xff) +
+                    (int) (clientCode&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) + (int) (retain&0xff) +
                     (int) (batteryCapacity&0xff) + (int) (rollingCode[0]&0xff) + (int) (rollingCode[1]&0xff) +
                     (int) (rollingCode[2]&0xff) + (int) (rollingCode[3]&0xff) + (int) (rollingCode[4]&0xff) + 2;
             //Double check for inconsistency in documentation
