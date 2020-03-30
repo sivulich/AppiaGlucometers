@@ -7,6 +7,9 @@ import java.util.List;
 
 public class ProtocolV1 extends Protocol {
     private SerialCommunicator serial;
+    private Communication asyncCom;
+    private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
+    private AsyncState asyncState;
 
     static public class Communication{
         public InfoPacket infoPacket;
@@ -249,6 +252,7 @@ public class ProtocolV1 extends Protocol {
 
     public ProtocolV1(SerialCommunicator comm){
         serial = comm;
+        asyncState = AsyncState.DONE;
         comm.connect();
     }
 
@@ -275,7 +279,10 @@ public class ProtocolV1 extends Protocol {
             serial.send(appReplyPacket.to_bytes());
             reply = serial.recieve();
             try{
-                comm.resultPackets.add(new ResultPacket(reply));
+                ResultPacket resultPacket = new ResultPacket(reply);
+                if(comm.resultPackets == null)
+                    comm.resultPackets = new ArrayList<ResultPacket>();
+                comm.resultPackets.add(resultPacket);
 
             }catch (IllegalLengthException | IllegalContentException e){
                 try {
@@ -288,4 +295,82 @@ public class ProtocolV1 extends Protocol {
             }
         }
     }
+
+    public boolean asyncStartCommunication(){
+        if (!serial.connected){
+            serial.connect();
+        }
+        if(!serial.connected)
+            return false;
+        asyncCom = new Communication();
+        Calendar calendar = Calendar.getInstance();
+        AppReplyPacket appReplyPacket = new AppReplyPacket(calendar);
+        serial.send(appReplyPacket.to_bytes());
+        asyncState = AsyncState.WAITING_INFO_PACKET;
+        return true;
+    }
+
+    public boolean asyncDoneCommunication(){
+        return (asyncState == AsyncState.DONE);
+    }
+
+    public Communication asyncGetCommunication(){
+        return asyncCom;
+    }
+
+    public void asyncCallbackReceive(byte[] packet){
+        switch (asyncState){
+            case WAITING_INFO_PACKET:
+                try{
+                    //Parse the information packet
+                    asyncCom.infoPacket = new InfoPacket(packet);
+
+                    //Change state to waiting for results or end packet
+                    asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
+
+                    //Create the reply packet and send it
+                    Calendar calendar = Calendar.getInstance();
+                    AppReplyPacket appReplyPacket = new AppReplyPacket(calendar);
+                    serial.send(appReplyPacket.to_bytes());
+                }catch (IllegalLengthException | IllegalContentException e){
+                    //If an error occurred load it to communication
+                    asyncCom.error = e.toString();
+                    asyncState = AsyncState.DONE;
+                }
+                break;
+            case WAITING_RESULT_OR_END_PACKET:
+                try{
+                    //Try to parse as a result packet
+                    ResultPacket resultPacket = new ResultPacket(packet);
+                    if(asyncCom.resultPackets == null)
+                        asyncCom.resultPackets = new ArrayList<ResultPacket>();
+                    asyncCom.resultPackets.add(resultPacket);
+
+                    //Create the reply packet and send it
+                    Calendar calendar = Calendar.getInstance();
+                    AppReplyPacket appReplyPacket = new AppReplyPacket(calendar);
+                    serial.send(appReplyPacket.to_bytes());
+                }catch (IllegalLengthException | IllegalContentException e){
+                    //If controlled exception occurred
+                    try {
+                        //Try to parse as End Packet
+                        asyncCom.endPacket = new EndPacket(packet);
+                        asyncState = AsyncState.DONE;
+                    } catch (IllegalLengthException | IllegalContentException k){
+                        asyncCom.error = k.toString();
+                        asyncState = AsyncState.DONE;
+                    }
+                }
+                break;
+
+            //If entered this function in DONE state an error ocurred, should clear communication
+            case DONE:
+            default:
+                asyncCom = new Communication();
+                asyncCom.error = "Received a packet after communication is done";
+                asyncState = AsyncState.DONE;
+                break;
+        }
+    }
+
 }
