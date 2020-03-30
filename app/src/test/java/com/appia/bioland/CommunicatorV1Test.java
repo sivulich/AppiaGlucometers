@@ -7,7 +7,7 @@ import com.appia.bioland.protocols.ProtocolV1;
 
 import static org.junit.Assert.*;
 
-public class ComunicatorV1Test {
+public class CommunicatorV1Test {
     public class SerialCommunicatorTester extends SerialCommunicator{
         int status = 0;
 
@@ -81,32 +81,17 @@ public class ComunicatorV1Test {
         assertEquals(comm.endPacket, null);
 
         //Receive 3 Data packets
-        packet = ser.recieve();
-        protocol.asyncCallbackReceive(packet);
-        comm = protocol.asyncGetCommunication();
-        assertEquals(protocol.asyncDoneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertEquals(comm.resultPackets.size(), 1);
-        assertEquals(comm.endPacket, null);
-
-        packet = ser.recieve();
-        protocol.asyncCallbackReceive(packet);
-        comm = protocol.asyncGetCommunication();
-        assertEquals(protocol.asyncDoneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertEquals(comm.resultPackets.size(), 2);
-        assertEquals(comm.endPacket, null);
-
-        packet = ser.recieve();
-        protocol.asyncCallbackReceive(packet);
-        comm = protocol.asyncGetCommunication();
-        assertEquals(protocol.asyncDoneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertEquals(comm.resultPackets.size(), 3);
-        assertEquals(comm.endPacket, null);
+        for(int i=0;i<3 ;i++)
+        {
+            packet = ser.recieve();
+            protocol.asyncCallbackReceive(packet);
+            comm = protocol.asyncGetCommunication();
+            assertEquals(protocol.asyncDoneCommunication(), false);
+            assertNotEquals(comm.infoPacket, null);
+            assertNotEquals(comm.resultPackets, null);
+            assertEquals(comm.resultPackets.size(), i+1);
+            assertEquals(comm.endPacket, null);
+        }
 
         //Receive END packet
         packet = ser.recieve();

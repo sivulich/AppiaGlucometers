@@ -77,4 +77,50 @@ public class CommunicatorV2Test {
         assertEquals(comm.resultPackets.size(), 8);
         assertNotEquals(comm.endPacket, null);
     }
+
+    @Test
+    public void protocolAsyncV2IsCorrect() {
+        SerialCommunicatorTester ser = new SerialCommunicatorTester();
+        ProtocolV2 protocol = new ProtocolV2(ser);
+
+        //Sent firts packet
+        boolean start = protocol.asyncStartCommunication();
+        ProtocolV2.Communication comm = protocol.asyncGetCommunication();
+        assertEquals(start, true);
+        assertEquals(protocol.asyncDoneCommunication(), false);
+        assertEquals(comm.infoPacket, null);
+        assertEquals(comm.resultPackets, null);
+        assertEquals(comm.endPacket, null);
+
+        //Receive INFO packet
+        byte[] packet = ser.recieve();
+        protocol.asyncCallbackReceive(packet);
+        comm = protocol.asyncGetCommunication();
+        assertEquals(protocol.asyncDoneCommunication(), false);
+        assertNotEquals(comm.infoPacket, null);
+        assertEquals(comm.resultPackets, null);
+        assertEquals(comm.endPacket, null);
+
+        //Receive 8 Data packets
+        for(int i=0;i<8 ;i++)
+        {
+            packet = ser.recieve();
+            protocol.asyncCallbackReceive(packet);
+            comm = protocol.asyncGetCommunication();
+            assertEquals(protocol.asyncDoneCommunication(), false);
+            assertNotEquals(comm.infoPacket, null);
+            assertNotEquals(comm.resultPackets, null);
+            assertEquals(comm.resultPackets.size(), i+1);
+            assertEquals(comm.endPacket, null);
+        }
+
+        //Receive END packet
+        packet = ser.recieve();
+        protocol.asyncCallbackReceive(packet);
+        comm = protocol.asyncGetCommunication();
+        assertEquals(protocol.asyncDoneCommunication(), true);
+        assertNotEquals(comm.infoPacket, null);
+        assertNotEquals(comm.resultPackets, null);
+        assertNotEquals(comm.endPacket, null);
+    }
 }
