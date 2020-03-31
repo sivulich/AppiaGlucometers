@@ -156,7 +156,7 @@ public class ProtocolV1 extends Protocol {
         @Override
         protected byte[] getVariablesInByteArray(){
             byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 5];
+            byte[] bytes = new byte[parentBytes.length + 8];
             for(int i=0;i<parentBytes.length;i++){
                 bytes[i] = parentBytes[i];
             }
