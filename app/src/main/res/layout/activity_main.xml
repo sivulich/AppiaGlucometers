@@ -1,7 +1,199 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.appia.main.MainActivity"/>
+    android:orientation="vertical"
+    tools:context="com.appia.main.BiolandActivity">
+
+    <include
+        android:id="@+id/toolbar_actionbar"
+        layout="@layout/toolbar"/>
+
+    <RelativeLayout
+        style="@style/HeaderShadow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- The size of text below must be fixed, therefore dp are used instead of sp -->
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="@dimen/gls_feature_title_long_margin"
+            android:rotation="270"
+            android:text="@string/gls_feature_title_long"
+            android:textColor="@color/verticalTitleColor"
+            android:textSize="32dp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_marginLeft="@dimen/feature_horizontal_margin"
+            android:layout_marginTop="@dimen/feature_device_name_margin_top"
+            android:background="@drawable/battery"
+            android:freezesText="true"
+            android:gravity="center"
+            android:text="@string/not_available"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/device_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="@dimen/feature_device_name_margin_top"
+            android:layout_toRightOf="@+id/battery"
+            android:ellipsize="end"
+            android:freezesText="true"
+            android:maxLines="1"
+            android:text="@string/gls_default_name"
+            android:textAllCaps="true"
+            android:textAppearance="?android:attr/textAppearanceLarge"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/action_connect"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- Application section -->
+
+            <LinearLayout
+                style="@style/Widget.List"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginLeft="@dimen/feature_horizontal_margin"
+                android:layout_marginRight="@dimen/feature_horizontal_margin"
+                android:layout_marginTop="@dimen/feature_vertical_margin_top"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <RelativeLayout
+                    style="@style/Widget.ListTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/Widget.ListTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/gls_section_data"/>
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/unit"
+                        style="@style/Widget.ListTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="mg/dL"
+                        android:layout_alignParentRight="true"
+                        android:layout_marginRight="4dp"/>
+                </RelativeLayout>
+
+                <ExpandableListView
+                    android:id="@+id/list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scrollbarStyle="outsideOverlay"
+                    tools:listitem="@layout/activity_feature_gls_item"/>
+
+                <TextView
+                    android:id="@+id/empty"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="@string/gls_no_data"/>
+            </LinearLayout>
+
+            <!-- Timestamp section -->
+
+            <LinearLayout
+                style="@style/Widget.List"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/activity_vertical_margin_bottom"
+                android:layout_marginLeft="@dimen/feature_horizontal_margin"
+                android:layout_marginRight="@dimen/feature_horizontal_margin"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/Widget.ListTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/gls_section_actions"/>
+
+                <LinearLayout
+                    android:id="@+id/gls_control_std"
+                    style="?android:attr/buttonBarStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/action_read"
+                        style="?android:attr/buttonBarButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:text="@string/gls_action_read"/>
+
+                    <Button
+                        android:id="@+id/action_info"
+                        style="?android:attr/buttonBarButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:text="@string/gls_action_info"/>
+
+                    <Button
+                        android:id="@+id/action_tbd"
+                        style="?android:attr/buttonBarButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minWidth="0dp"
+                        android:text="@string/gls_action_tbd"/>
+                </LinearLayout>
+
+<!--                <LinearLayout-->
+<!--                    android:id="@+id/gls_control_abort"-->
+<!--                    style="?android:attr/buttonBarStyle"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:orientation="horizontal"-->
+<!--                    android:visibility="gone">-->
+
+<!--                    <Button-->
+<!--                        android:id="@+id/action_abort"-->
+<!--                        style="?android:attr/buttonBarButtonStyle"-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:minWidth="0dp"-->
+<!--                        android:text="@string/gls_action_abort"/>-->
+<!--                </LinearLayout>-->
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/action_connect"
+            style="@style/Widget.Connect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="@dimen/activity_vertical_margin_bottom"
+            android:onClick="onConnectClicked"
+            android:text="@string/action_connect"/>
+
+
+    </RelativeLayout>
+</LinearLayout>
