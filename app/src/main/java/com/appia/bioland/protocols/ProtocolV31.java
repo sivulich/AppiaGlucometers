@@ -21,69 +21,44 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
-    static public class AppPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
-        byte year;
-        byte month;
-        byte day;
-        byte hour;
-        byte min;
+    static public class AppPacketV3 extends AppPacket{
         byte second;
-        byte checksum;
 
-        public byte[] to_bytes(){
-            byte[] packet = new byte[10];
-            packet[0] = startCode;
-            packet[1] = packetLength;
-            packet[2] = packetCategory;
-            packet[3] = year;
-            packet[4] = month;
-            packet[5] = day;
-            packet[6] = hour;
-            packet[7] = min;
-            packet[8] = second;
-            packet[9] = checksum;
-            return packet;
+        public AppPacketV3(Calendar calendar){
+            super(calendar);
+            second = (byte) calendar.get(Calendar.SECOND);
         }
+
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 1];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length] = second;
+            return bytes;
+        }
+
     }
 
-    static public class AppInfoPacket extends AppPacket{
+    static public class AppInfoPacket extends AppPacketV3{
         public AppInfoPacket(Calendar now){
+            super(now);
             startCode = 0x5A;
             packetLength = 0x0A;
             packetCategory = 0x00;
-            year = (byte) now.get(Calendar.YEAR);
-            month = (byte) now.get(Calendar.MONTH);
-            day = (byte) now.get(Calendar.DAY_OF_MONTH);
-            hour = (byte) now.get(Calendar.HOUR);
-            min = (byte) now.get(Calendar.MINUTE);
-            second = (byte) now.get(Calendar.SECOND);
-            int big =(int) (startCode&0xff) + (int) (packetLength&0xff) +
-                    (int) (packetCategory&0xff) + (int) (year&0xff) +
-                    (int) (month&0xff) + (int) (day&0xff) +
-                    (int) (hour&0xff) + (int) (second&0xff) + 2;
-            checksum = (byte)(big&0xff);
+            calculateChecksum(1);
         }
     }
 
-    static public class AppDataPacket extends AppPacket{
+    static public class AppDataPacket extends AppPacketV3{
         public AppDataPacket(Calendar now){
+            super(now);
             startCode = 0x5A;
             packetLength = 0x0A;
             packetCategory = 0x03;
-            year = (byte) now.get(Calendar.YEAR);
-            month = (byte) now.get(Calendar.MONTH);
-            day = (byte) now.get(Calendar.DAY_OF_MONTH);
-            hour = (byte) now.get(Calendar.HOUR);
-            min = (byte) now.get(Calendar.MINUTE);
-            second = (byte) now.get(Calendar.SECOND);
-            int big =(int) (startCode&0xff) + (int) (packetLength&0xff) +
-                    (int) (packetCategory&0xff) + (int) (year&0xff) +
-                    (int) (month&0xff) + (int) (day&0xff) +
-                    (int) (hour&0xff) + (int) (second&0xff) + 2;
-            checksum = (byte)(big&0xff);
+            calculateChecksum(1);
         }
     }
 
