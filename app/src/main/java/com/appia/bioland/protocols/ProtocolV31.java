@@ -21,10 +21,10 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
-    static public class AppPacketV3 extends AppPacket{
+    static public class AppPacketV31 extends AppPacket{
         byte second;
 
-        public AppPacketV3(Calendar calendar){
+        public AppPacketV31(Calendar calendar){
             super(calendar);
             second = (byte) calendar.get(Calendar.SECOND);
         }
@@ -42,7 +42,7 @@ public class ProtocolV31 extends Protocol {
 
     }
 
-    static public class AppInfoPacket extends AppPacketV3{
+    static public class AppInfoPacket extends AppPacketV31{
         public AppInfoPacket(Calendar now){
             super(now);
             startCode = 0x5A;
@@ -52,7 +52,7 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
-    static public class AppDataPacket extends AppPacketV3{
+    static public class AppDataPacket extends AppPacketV31{
         public AppDataPacket(Calendar now){
             super(now);
             startCode = 0x5A;
