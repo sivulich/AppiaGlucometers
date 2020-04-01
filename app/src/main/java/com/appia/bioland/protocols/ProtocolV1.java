@@ -31,9 +31,7 @@ public class ProtocolV1 extends Protocol {
         }
     }
 
-    static public class InfoPacket extends DevicePacket{
-        byte versionCode;
-        byte clientCode;
+    static public class InfoPacketV1 extends InfoPacket{
         byte modelCode;
         byte typeCode;
         byte userID;
@@ -44,24 +42,22 @@ public class ProtocolV1 extends Protocol {
         @Override
         protected byte[] getVariablesInByteArray(){
             byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 5];
+            byte[] bytes = new byte[parentBytes.length + 8];
             for(int i=0;i<parentBytes.length;i++){
                 bytes[i] = parentBytes[i];
             }
-            bytes[parentBytes.length+0] = versionCode;
-            bytes[parentBytes.length+1] = clientCode;
-            bytes[parentBytes.length+2] = modelCode;
-            bytes[parentBytes.length+3] = typeCode;
-            bytes[parentBytes.length+4] = userID;
-            bytes[parentBytes.length+4] = productionYear;
+            bytes[parentBytes.length+0] = modelCode;
+            bytes[parentBytes.length+1] = typeCode;
+            bytes[parentBytes.length+2] = userID;
+            bytes[parentBytes.length+3] = productionYear;
             bytes[parentBytes.length+4] = productionMonth;
-            bytes[parentBytes.length+4] = serialNumber[0];
-            bytes[parentBytes.length+4] = serialNumber[1];
-            bytes[parentBytes.length+4] = serialNumber[2];
+            bytes[parentBytes.length+5] = serialNumber[0];
+            bytes[parentBytes.length+6] = serialNumber[1];
+            bytes[parentBytes.length+7] = serialNumber[2];
             return bytes;
         }
 
-        public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
+        public InfoPacketV1(byte[] raw) throws IllegalContentException, IllegalLengthException {
             super(raw);
             if (raw.length != 16)
                 throw new IllegalLengthException("Packet length must be 16");
@@ -75,8 +71,6 @@ public class ProtocolV1 extends Protocol {
             if (packetCategory != 0x00)
                 throw new IllegalContentException("PacketCategory must be 0x00");
 
-            versionCode = raw[3];
-            clientCode = raw[4];
             modelCode = raw[5];
             typeCode = raw[6];
             userID = raw[7];
@@ -213,7 +207,7 @@ public class ProtocolV1 extends Protocol {
         serial.send(appReplyPacket.to_bytes());
         byte[] reply = serial.recieve();
         try{
-            comm.infoPacket = new InfoPacket(reply);
+            comm.infoPacket = new InfoPacketV1(reply);
         }catch (IllegalLengthException | IllegalContentException e){
             comm.error = e.toString();
             return comm;
@@ -268,7 +262,7 @@ public class ProtocolV1 extends Protocol {
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
-                    asyncCom.infoPacket = new InfoPacket(packet);
+                    asyncCom.infoPacket = new InfoPacketV1(packet);
 
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;

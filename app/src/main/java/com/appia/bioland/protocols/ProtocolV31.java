@@ -65,16 +65,14 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
-    static public class InfoPacket extends DevicePacket{
-        byte versionCode;
-        byte clientCode;
+    static public class InfoPacketV31 extends InfoPacket{
         byte modelCode;
         byte typeCode;
         byte retain;
         byte batteryCapacity;
         byte[] rollingCode;
 
-        public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
+        public InfoPacketV31(byte[] raw) throws IllegalContentException, IllegalLengthException {
             super(raw);
             if (raw.length != 15)
                 throw new IllegalLengthException("Packet length must be 15");
@@ -88,8 +86,6 @@ public class ProtocolV31 extends Protocol {
             if (packetCategory != 0x00)
                 throw new IllegalContentException("PacketCategory must be 0x00");
 
-            versionCode = raw[3];
-            clientCode = raw[4];
             modelCode = raw[5];
             typeCode = raw[6];
             retain = raw[7];
@@ -110,21 +106,19 @@ public class ProtocolV31 extends Protocol {
         @Override
         protected byte[] getVariablesInByteArray(){
             byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 11];
+            byte[] bytes = new byte[parentBytes.length + 9];
             for(int i=0;i<parentBytes.length;i++){
                 bytes[i] = parentBytes[i];
             }
-            bytes[parentBytes.length+0] = versionCode;
-            bytes[parentBytes.length+1] = clientCode;
-            bytes[parentBytes.length+2] = modelCode;
-            bytes[parentBytes.length+3] = typeCode;
-            bytes[parentBytes.length+4] = retain;
-            bytes[parentBytes.length+5] = batteryCapacity;
-            bytes[parentBytes.length+6] = rollingCode[0];
-            bytes[parentBytes.length+7] = rollingCode[1];
-            bytes[parentBytes.length+8] = rollingCode[2];
-            bytes[parentBytes.length+9] = rollingCode[3];
-            bytes[parentBytes.length+10] = rollingCode[4];
+            bytes[parentBytes.length+0] = modelCode;
+            bytes[parentBytes.length+1] = typeCode;
+            bytes[parentBytes.length+2] = retain;
+            bytes[parentBytes.length+3] = batteryCapacity;
+            bytes[parentBytes.length+4] = rollingCode[0];
+            bytes[parentBytes.length+5] = rollingCode[1];
+            bytes[parentBytes.length+6] = rollingCode[2];
+            bytes[parentBytes.length+7] = rollingCode[3];
+            bytes[parentBytes.length+8] = rollingCode[4];
             return bytes;
         }
 
@@ -273,7 +267,7 @@ public class ProtocolV31 extends Protocol {
         serial.send(appInfoPacket.to_bytes());
         byte[] reply = serial.recieve();
         try{
-            comm.infoPacket = new InfoPacket(reply);
+            comm.infoPacket = new InfoPacketV31(reply);
         }catch (IllegalLengthException | IllegalContentException e){
             comm.error = e.toString();
             return comm;
@@ -326,7 +320,7 @@ public class ProtocolV31 extends Protocol {
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
-                    asyncCom.infoPacket = new InfoPacket(packet);
+                    asyncCom.infoPacket = new InfoPacketV31(packet);
 
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;

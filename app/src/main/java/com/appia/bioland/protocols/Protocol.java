@@ -62,6 +62,29 @@ public class Protocol {
         }
     }
 
+    static public class InfoPacket extends DevicePacket{
+        byte versionCode;
+        byte clientCode;
+
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 2];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length+0] = versionCode;
+            bytes[parentBytes.length+1] = clientCode;
+            return bytes;
+        }
+
+        public InfoPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+            super(raw);
+            versionCode = raw[3];
+            clientCode = raw[4];
+        }
+    }
+
     static public class AppPacket extends ProtocolPacket{
         byte year;
         byte month;
@@ -106,6 +129,7 @@ public class Protocol {
             min = (byte) calendar.get(Calendar.MINUTE);
         }
     }
+
 
     static public class Communication{
         public DevicePacket infoPacket;

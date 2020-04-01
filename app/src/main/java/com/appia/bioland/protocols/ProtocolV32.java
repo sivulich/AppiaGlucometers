@@ -66,9 +66,7 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-    static public class InfoPacket extends DevicePacket{
-        byte versionCode;
-        byte clientCode;
+    static public class InfoPacketV32 extends InfoPacket{
         byte batteryCapacity;
         byte modelCode;
         byte typeCode;
@@ -77,28 +75,26 @@ public class ProtocolV32 extends Protocol {
         @Override
         protected byte[] getVariablesInByteArray(){
             byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 14];
+            byte[] bytes = new byte[parentBytes.length + 12];
             for(int i=0;i<parentBytes.length;i++){
                 bytes[i] = parentBytes[i];
             }
-            bytes[parentBytes.length+0] = versionCode;
-            bytes[parentBytes.length+1] = clientCode;
-            bytes[parentBytes.length+2] = batteryCapacity;
-            bytes[parentBytes.length+3] = modelCode;
-            bytes[parentBytes.length+4] = typeCode;
-            bytes[parentBytes.length+5] = seriesNumber[0];
-            bytes[parentBytes.length+6] = seriesNumber[1];
-            bytes[parentBytes.length+7] = seriesNumber[2];
-            bytes[parentBytes.length+8] = seriesNumber[3];
-            bytes[parentBytes.length+9] = seriesNumber[4];
-            bytes[parentBytes.length+10] = seriesNumber[5];
-            bytes[parentBytes.length+11] = seriesNumber[6];
-            bytes[parentBytes.length+12] = seriesNumber[7];
-            bytes[parentBytes.length+13] = seriesNumber[8];
+            bytes[parentBytes.length+0] = batteryCapacity;
+            bytes[parentBytes.length+1] = modelCode;
+            bytes[parentBytes.length+2] = typeCode;
+            bytes[parentBytes.length+3] = seriesNumber[0];
+            bytes[parentBytes.length+4] = seriesNumber[1];
+            bytes[parentBytes.length+5] = seriesNumber[2];
+            bytes[parentBytes.length+6] = seriesNumber[3];
+            bytes[parentBytes.length+7] = seriesNumber[4];
+            bytes[parentBytes.length+8] = seriesNumber[5];
+            bytes[parentBytes.length+9] = seriesNumber[6];
+            bytes[parentBytes.length+10] = seriesNumber[7];
+            bytes[parentBytes.length+11] = seriesNumber[8];
             return bytes;
         }
 
-        public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
+        public InfoPacketV32(byte[] raw) throws IllegalContentException, IllegalLengthException {
             super(raw);
             if (raw.length != 18)
                 throw new IllegalLengthException("Packet length must be 18");
@@ -112,8 +108,6 @@ public class ProtocolV32 extends Protocol {
             if (packetCategory != 0x00)
                 throw new IllegalContentException("PacketCategory must be 0x00");
 
-            versionCode = raw[3];
-            clientCode = raw[4];
             batteryCapacity = raw[5];
             modelCode = raw[6];
             typeCode = raw[7];
@@ -279,7 +273,7 @@ public class ProtocolV32 extends Protocol {
         serial.send(appInfoPacket.to_bytes());
         byte[] reply = serial.recieve();
         try{
-            comm.infoPacket = new InfoPacket(reply);
+            comm.infoPacket = new InfoPacketV32(reply);
         }catch (IllegalLengthException | IllegalContentException e){
             comm.error = e.toString();
             return comm;
@@ -332,7 +326,7 @@ public class ProtocolV32 extends Protocol {
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
-                    asyncCom.infoPacket = new InfoPacket(packet);
+                    asyncCom.infoPacket = new InfoPacketV32(packet);
 
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
