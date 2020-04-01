@@ -1,6 +1,7 @@
 package com.appia.bioland.protocols;
 
 import java.util.Calendar;
+import java.util.List;
 
 public class Protocol {
     static public class IllegalLengthException extends Exception{
@@ -105,5 +106,17 @@ public class Protocol {
             min = (byte) calendar.get(Calendar.MINUTE);
         }
     }
+
+    static public class Communication{
+        public DevicePacket infoPacket;
+        public List<DevicePacket> resultPackets;
+        public DevicePacket endPacket;
+        public String error;
+
+        public boolean valid(){
+            return (infoPacket!=null && resultPackets !=null && endPacket!= null);
+        }
+    }
+
 
 }

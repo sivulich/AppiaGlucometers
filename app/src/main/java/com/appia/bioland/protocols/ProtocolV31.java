@@ -10,17 +10,6 @@ public class ProtocolV31 extends Protocol {
     private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
 
-    static public class Communication{
-        public InfoPacket infoPacket;
-        public List<ResultPacket> resultPackets;
-        public EndPacket endPacket;
-        public String error;
-
-        public boolean valid(){
-            return (infoPacket!=null && resultPackets !=null && endPacket!= null);
-        }
-    }
-
     static public class AppPacketV31 extends AppPacket{
         byte second;
 
@@ -289,7 +278,7 @@ public class ProtocolV31 extends Protocol {
             comm.error = e.toString();
             return comm;
         }
-        comm.resultPackets = new ArrayList<ResultPacket>();
+        comm.resultPackets = new ArrayList<>();
 
         while(true){
             AppDataPacket appDataPacket = new AppDataPacket(calendar);
@@ -357,7 +346,7 @@ public class ProtocolV31 extends Protocol {
                     //Try to parse as a result packet
                     ResultPacket resultPacket = new ResultPacket(packet);
                     if(asyncCom.resultPackets == null)
-                        asyncCom.resultPackets = new ArrayList<ResultPacket>();
+                        asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);
 
                     //Create the reply packet and send it

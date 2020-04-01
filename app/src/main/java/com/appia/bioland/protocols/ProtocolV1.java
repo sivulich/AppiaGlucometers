@@ -11,44 +11,6 @@ public class ProtocolV1 extends Protocol {
     private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
 
-    static public class Communication{
-        public InfoPacket infoPacket;
-        public List<ResultPacket> resultPackets;
-        public EndPacket endPacket;
-        public String error;
-
-        public boolean valid(){
-            return (infoPacket!=null && resultPackets !=null && endPacket!= null);
-        }
-    }
-
-//    static public class AppPacket{
-//        byte startCode;
-//        byte packetLength;
-//        byte packetCategory;
-//        byte year;
-//        byte month;
-//        byte day;
-//        byte hour;
-//        byte min;
-//        byte[] checksum;
-//
-//        public byte[] to_bytes(){
-//            byte[] packet = new byte[11];
-//            packet[0] = startCode;
-//            packet[1] = packetLength;
-//            packet[2] = packetCategory;
-//            packet[3] = year;
-//            packet[4] = month;
-//            packet[5] = day;
-//            packet[6] = hour;
-//            packet[7] = min;
-//            packet[8] = checksum[0];
-//            packet[9] = checksum[1];
-//            packet[10] = checksum[2];
-//            return packet;
-//        }
-//    }
     static public class AppReplyPacket extends AppPacket{
         public AppReplyPacket(Calendar now){
             super(now);
@@ -256,7 +218,7 @@ public class ProtocolV1 extends Protocol {
             comm.error = e.toString();
             return comm;
         }
-        comm.resultPackets = new ArrayList<ResultPacket>();
+        comm.resultPackets = new ArrayList<>();
         while(true){
             appReplyPacket = new AppReplyPacket(calendar);
             serial.send(appReplyPacket.to_bytes());
@@ -264,7 +226,7 @@ public class ProtocolV1 extends Protocol {
             try{
                 ResultPacket resultPacket = new ResultPacket(reply);
                 if(comm.resultPackets == null)
-                    comm.resultPackets = new ArrayList<ResultPacket>();
+                    comm.resultPackets = new ArrayList<>();
                 comm.resultPackets.add(resultPacket);
 
             }catch (IllegalLengthException | IllegalContentException e){
@@ -326,7 +288,7 @@ public class ProtocolV1 extends Protocol {
                     //Try to parse as a result packet
                     ResultPacket resultPacket = new ResultPacket(packet);
                     if(asyncCom.resultPackets == null)
-                        asyncCom.resultPackets = new ArrayList<ResultPacket>();
+                        asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);
 
                     //Create the reply packet and send it
