@@ -21,69 +21,44 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-    static public class AppPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
-        byte year;
-        byte month;
-        byte day;
-        byte hour;
-        byte min;
-        byte second;
-        byte checksum;
+    static public class AppPacketV32 extends AppPacket{
 
-        public byte[] to_bytes(){
-            byte[] packet = new byte[10];
-            packet[0] = startCode;
-            packet[1] = packetLength;
-            packet[2] = packetCategory;
-            packet[3] = year;
-            packet[4] = month;
-            packet[5] = day;
-            packet[6] = hour;
-            packet[7] = min;
-            packet[8] = second;
-            packet[9] = checksum;
-            return packet;
+        byte second;
+
+        public AppPacketV32(Calendar calendar){
+            super(calendar);
+            second = (byte) calendar.get(Calendar.SECOND);
+        }
+
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 1];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length] = second;
+            return bytes;
         }
     }
 
-    static public class AppInfoPacket extends AppPacket{
+    static public class AppInfoPacket extends AppPacketV32{
         public AppInfoPacket(Calendar now){
+            super(now);
             startCode = 0x5A;
             packetLength = 0x0A;
             packetCategory = 0x00;
-            year = (byte) now.get(Calendar.YEAR);
-            month = (byte) now.get(Calendar.MONTH);
-            day = (byte) now.get(Calendar.DAY_OF_MONTH);
-            hour = (byte) now.get(Calendar.HOUR);
-            min = (byte) now.get(Calendar.MINUTE);
-            second = (byte) now.get(Calendar.SECOND);
-            int big =(int) (startCode&0xff) + (int) (packetLength&0xff) +
-                    (int) (packetCategory&0xff) + (int) (year&0xff) +
-                    (int) (month&0xff) + (int) (day&0xff) +
-                    (int) (hour&0xff) + (int) (second&0xff) + 2;
-            checksum = (byte)(big&0xff);
+            calculateChecksum(1);
         }
     }
 
-    static public class AppDataPacket extends AppPacket{
+    static public class AppDataPacket extends AppPacketV32{
         public AppDataPacket(Calendar now){
+            super(now);
             startCode = 0x5A;
             packetLength = 0x0A;
             packetCategory = 0x03;
-            year = (byte) now.get(Calendar.YEAR);
-            month = (byte) now.get(Calendar.MONTH);
-            day = (byte) now.get(Calendar.DAY_OF_MONTH);
-            hour = (byte) now.get(Calendar.HOUR);
-            min = (byte) now.get(Calendar.MINUTE);
-            second = (byte) now.get(Calendar.SECOND);
-            int big =(int) (startCode&0xff) + (int) (packetLength&0xff) +
-                    (int) (packetCategory&0xff) + (int) (year&0xff) +
-                    (int) (month&0xff) + (int) (day&0xff) +
-                    (int) (hour&0xff) + (int) (second&0xff) + 2;
-            checksum = (byte)(big&0xff);
+            calculateChecksum(1);
         }
     }
 
@@ -101,31 +76,49 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-    static public class InfoPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
+    static public class InfoPacket extends DevicePacket{
         byte versionCode;
         byte clientCode;
         byte batteryCapacity;
         byte modelCode;
         byte typeCode;
         byte[] seriesNumber;
-        byte checksum;
+
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 14];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length+0] = versionCode;
+            bytes[parentBytes.length+1] = clientCode;
+            bytes[parentBytes.length+2] = batteryCapacity;
+            bytes[parentBytes.length+3] = modelCode;
+            bytes[parentBytes.length+4] = typeCode;
+            bytes[parentBytes.length+5] = seriesNumber[0];
+            bytes[parentBytes.length+6] = seriesNumber[1];
+            bytes[parentBytes.length+7] = seriesNumber[2];
+            bytes[parentBytes.length+8] = seriesNumber[3];
+            bytes[parentBytes.length+9] = seriesNumber[4];
+            bytes[parentBytes.length+10] = seriesNumber[5];
+            bytes[parentBytes.length+11] = seriesNumber[6];
+            bytes[parentBytes.length+12] = seriesNumber[7];
+            bytes[parentBytes.length+13] = seriesNumber[8];
+            return bytes;
+        }
 
         public InfoPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
+            super(raw);
             if (raw.length != 18)
                 throw new IllegalLengthException("Packet length must be 18");
 
-            startCode = raw[0];
             if (startCode != 0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
 
-            packetLength = raw[1];
             if (packetLength != 0x12)
                 throw new IllegalContentException("PacketLength must be 0x12");
 
-            packetCategory = raw[2];
             if (packetCategory != 0x00)
                 throw new IllegalContentException("PacketCategory must be 0x00");
 
@@ -145,21 +138,10 @@ public class ProtocolV32 extends Protocol {
             seriesNumber[7] = raw[15];
             seriesNumber[8] = raw[16];
 
-            checksum = raw[17];
-            int big = (int) (startCode &0xff) +
-                    (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (versionCode&0xff) +
-                    (int) (clientCode&0xff) + (int) (batteryCapacity&0xff) + (int) (modelCode&0xff) + (int) (typeCode&0xff) +
-                    (int) (seriesNumber[0]&0xff) + (int) (seriesNumber[1]&0xff) +
-                    (int) (seriesNumber[2]&0xff) + (int) (seriesNumber[3]&0xff) +
-                    (int) (seriesNumber[4]&0xff) + (int) (seriesNumber[5]&0xff) +
-                    (int) (seriesNumber[6]&0xff) + (int) (seriesNumber[7]&0xff) +
-                    (int) (seriesNumber[8]&0xff) + 2;
+            calculateChecksum(1);
             //Double check for inconsistency in documentation
-            if( !((big&0xff) == (int)(checksum&0xff) || ((big-2)&0xff) == (int)(checksum&0xff)))
+            if( !(checksum[0] == raw[17] || (checksum[0]+(byte)2) == raw[17]))
                 throw new IllegalContentException("Checksum Does Not Match");
-
-
-
         }
     }
 
@@ -201,10 +183,7 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-    static public class ResultPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
+    static public class ResultPacket extends DevicePacket{
         byte year;
         byte month;
         byte day;
@@ -212,20 +191,18 @@ public class ProtocolV32 extends Protocol {
         byte min;
         byte retain;
         byte[] glucose;
-        byte checksum;
 
         public ResultPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+            super(raw);
             if (raw.length != 12)
                 throw new IllegalLengthException("Packet length must be 14");
-            startCode = raw[0];
+
             if (startCode != (byte)0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
 
-            packetLength = raw[1];
             if (packetLength != (byte)0x0C)
                 throw new IllegalContentException("PacketLength must be 0x0C");
 
-            packetCategory = raw[2];
             if (packetCategory != (byte)0x03)
                 throw new IllegalContentException("PacketCategory must be 0x03");
 
@@ -238,51 +215,56 @@ public class ProtocolV32 extends Protocol {
             glucose = new byte[2];
             glucose[0] = raw[9];
             glucose[1] = raw[10];
-            checksum = raw[11];
 
-            //TODO: Verify if is +2 or not
-            int big = (int) (startCode &0xff) +
-                    (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (year&0xff) +
-                    (int) (month&0xff) + (int) (day&0xff) + (int) (hour&0xff) + (int) (min&0xff) +
-                    (int) (retain&0xff) + (int)(glucose[0]&0xff) + (int)(glucose[1]&0xff) +2;
+            calculateChecksum(1);
+
             //Double check for inconsitency in documentation
-            if( !((big&0xff) == (int)(checksum&0xff) || ((big-2)&0xff) == (int)(checksum&0xff)))
+            if(!(checksum[0] == raw[11] || (checksum[0]+(byte)2) == raw[11]))
                 throw new IllegalContentException("Checksum Does Not Match");
+        }
 
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 8];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length+0] = year;
+            bytes[parentBytes.length+1] = month;
+            bytes[parentBytes.length+2] = day;
+            bytes[parentBytes.length+3] = hour;
+            bytes[parentBytes.length+4] = min;
+            bytes[parentBytes.length+5] = retain;
+            bytes[parentBytes.length+6] = glucose[0];
+            bytes[parentBytes.length+7] = glucose[1];
+            return bytes;
         }
     }
 
-    static public class EndPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
+    static public class EndPacket extends DevicePacket{
         byte retain;
-        byte checksum;
 
         public EndPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+            super(raw);
             if (raw.length != 5)
                 throw new IllegalLengthException("Packet length must be 5");
-            startCode = raw[0];
             if (startCode != (byte)0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
 
-            packetLength = raw[1];
             if (packetLength != (byte)0x05)
                 throw new IllegalContentException("PacketLength must be 0x05");
 
-            packetCategory = raw[2];
             if (packetCategory != (byte)0x05)
                 throw new IllegalContentException("PacketCategory must be 0x05");
 
             retain = raw[3];
 
-            checksum = raw[4];
+            calculateChecksum(1);
 
-            int big = (int) (startCode &0xff) +
-                    (int) (packetLength&0xff) + (int) (packetCategory&0xff) +
-                    (int) (retain&0xff) + 2;
 
-            if( !((big&0xff) == (int)(checksum&0xff) || ((big-2)&0xff) == (int)(checksum&0xff)))
+
+            if( !(checksum[0] == raw[4] || (checksum[0]+(byte)2) == raw[4]))
                 throw new IllegalContentException("Checksum Does Not Match");
 
         }
