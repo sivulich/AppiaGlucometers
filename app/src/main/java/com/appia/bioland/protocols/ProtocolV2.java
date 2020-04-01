@@ -6,11 +6,9 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV2 extends Protocol{
-    private SerialCommunicator serial;
-    private Communication asyncCom;
-    private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
-    private AsyncState asyncState;
-
+    public ProtocolV2(SerialCommunicator comm){
+        super(comm);
+    }
 
     static public class AppPacketV2 extends AppPacket{
         byte second;
@@ -191,11 +189,6 @@ public class ProtocolV2 extends Protocol{
                 throw new IllegalContentException("Checksum Does Not Match");
 
         }
-    }
-
-    public ProtocolV2(SerialCommunicator comm){
-        serial = comm;
-        comm.connect();
     }
 
     public Communication communicate(){

@@ -4,6 +4,16 @@ import java.util.Calendar;
 import java.util.List;
 
 public class Protocol {
+    protected SerialCommunicator serial;
+    protected Communication asyncCom;
+    protected enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
+    protected AsyncState asyncState;
+
+    public Protocol(SerialCommunicator ser){
+        serial = ser;
+        ser.connect();
+    }
+
     static public class IllegalLengthException extends Exception{
         String error;
         public String toString() {
@@ -142,5 +152,61 @@ public class Protocol {
         }
     }
 
+    protected AppPacket build_get_info_packet(Calendar calendar){
+        return new AppPacket(calendar);
+    }
+
+    protected AppPacket build_get_meas_packet(Calendar calendar){
+        return new AppPacket(calendar);
+    }
+
+    protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new InfoPacket(raw);
+    }
+
+
+
+
+
+
+//    public Communication communicate(){
+//        if (!serial.connected){
+//            serial.connect();
+//        }
+//        if(!serial.connected)
+//            return new Communication();
+//        Communication comm = new Communication();
+//        Calendar calendar = Calendar.getInstance();
+//        AppPacket appReplyPacket = build_get_info_packet();
+//        serial.send(appReplyPacket.to_bytes());
+//        byte[] reply = serial.recieve();
+//        try{
+//            comm.infoPacket = new InfoPacketV1(reply);
+//        }catch (IllegalLengthException | IllegalContentException e){
+//            comm.error = e.toString();
+//            return comm;
+//        }
+//        comm.resultPackets = new ArrayList<>();
+//        while(true){
+//            appReplyPacket = new AppReplyPacket(calendar);
+//            serial.send(appReplyPacket.to_bytes());
+//            reply = serial.recieve();
+//            try{
+//                ResultPacket resultPacket = new ResultPacket(reply);
+//                if(comm.resultPackets == null)
+//                    comm.resultPackets = new ArrayList<>();
+//                comm.resultPackets.add(resultPacket);
+//
+//            }catch (IllegalLengthException | IllegalContentException e){
+//                try {
+//                    comm.endPacket = new EndPacket(reply);
+//                    return comm;
+//                } catch (IllegalLengthException | IllegalContentException k){
+//                    comm.error = k.toString();
+//                    return comm;
+//                }
+//            }
+//        }
+//    }
 
 }

@@ -5,11 +5,10 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV32 extends Protocol {
-    private SerialCommunicator serial;
-    private Communication asyncCom;
-    private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
-    private AsyncState asyncState;
 
+    public ProtocolV32(SerialCommunicator ser){
+        super(ser);
+    }
 
     static public class AppPacketV32 extends AppPacket{
 
@@ -254,12 +253,6 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-
-
-    public ProtocolV32(SerialCommunicator comm){
-        serial = comm;
-        comm.connect();
-    }
 
     public Communication communicate(){
         if (!serial.connected){

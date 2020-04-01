@@ -6,10 +6,10 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV1 extends Protocol {
-    private SerialCommunicator serial;
-    private Communication asyncCom;
-    private enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
-    private AsyncState asyncState;
+
+    public ProtocolV1(SerialCommunicator comm){
+        super(comm);
+    }
 
     static public class AppReplyPacket extends AppPacket{
         public AppReplyPacket(Calendar now){
@@ -189,11 +189,7 @@ public class ProtocolV1 extends Protocol {
 
 
 
-    public ProtocolV1(SerialCommunicator comm){
-        serial = comm;
-        asyncState = AsyncState.DONE;
-        comm.connect();
-    }
+
 
     public Communication communicate(){
         if (!serial.connected){
