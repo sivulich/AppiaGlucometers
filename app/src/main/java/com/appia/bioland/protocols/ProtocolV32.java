@@ -5,11 +5,12 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV32 extends Protocol {
-
+    // This class implements the protocol V3.2 of communication with the Bioland G-500
     public ProtocolV32(SerialCommunicator ser){
         super(ser);
     }
 
+    // Define the packets of the protocol V3.2
     static public class AppPacketV32 extends AppPacket{
 
         byte second;
@@ -186,6 +187,7 @@ public class ProtocolV32 extends Protocol {
 
         }
     }
+
     static public class EndPacket extends DevicePacket{
         byte retain;
 
@@ -214,22 +216,27 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
+    // Override the set of functions that allow the FSM on the general protocol to use protocol V3.2.
     @Override
     protected AppPacket build_get_info_packet(Calendar calendar){
         return new AppInfoPacket(calendar);
     }
+
     @Override
     protected AppPacket build_get_meas_packet(Calendar calendar){
         return new AppDataPacket(calendar);
     }
+
     @Override
     protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new InfoPacketV32(raw);
     }
+
     @Override
     protected ResultPacket build_result_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new ResultPacketV32(raw);
     }
+
     @Override
     protected DevicePacket build_end_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new EndPacket(raw);

@@ -5,11 +5,12 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV31 extends Protocol {
+    // This class implements the protocol V3.1 of communication with the Bioland G-500
     public ProtocolV31(SerialCommunicator comm){
         super(comm);
     }
 
-
+    // Define the packets of the protocol V3.1
     static public class AppPacketV31 extends AppPacket{
         byte second;
 
@@ -211,6 +212,7 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
+    // Override the set of functions that allow the FSM on the general protocol to use protocol V3.1.
     @Override
     protected AppPacket build_get_info_packet(Calendar calendar){
         return new AppInfoPacket(calendar);

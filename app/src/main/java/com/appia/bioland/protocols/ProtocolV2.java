@@ -6,10 +6,12 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV2 extends Protocol{
+    // This class implements the protocol V2 of communication with the Bioland G-500
     public ProtocolV2(SerialCommunicator comm){
         super(comm);
     }
 
+    // Define the packets of the protocol V2
     static public class AppPacketV2 extends AppPacket{
         byte second;
 
@@ -30,6 +32,7 @@ public class ProtocolV2 extends Protocol{
         }
 
     }
+
     static public class AppInfoPacket extends AppPacketV2{
         public AppInfoPacket(Calendar now){
             super(now);
@@ -39,6 +42,7 @@ public class ProtocolV2 extends Protocol{
             calculateChecksum(1);
         }
     }
+
     static public class AppDataPacket extends AppPacketV2{
         public AppDataPacket(Calendar now){
             super(now);
@@ -122,6 +126,7 @@ public class ProtocolV2 extends Protocol{
 
         }
     }
+
     static public class EndPacket extends DevicePacket{
         byte retain;
 
@@ -156,22 +161,27 @@ public class ProtocolV2 extends Protocol{
         }
     }
 
+    // Override the set of functions that allow the FSM on the general protocol to use protocol V2.
     @Override
     protected AppPacket build_get_info_packet(Calendar calendar){
         return new AppInfoPacket(calendar);
     }
+
     @Override
     protected AppPacket build_get_meas_packet(Calendar calendar){
         return new AppDataPacket(calendar);
     }
+
     @Override
     protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new InfoPacketV2(raw);
     }
+
     @Override
     protected ResultPacket build_result_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new ResultPacketV2(raw);
     }
+
     @Override
     protected DevicePacket build_end_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new EndPacket(raw);

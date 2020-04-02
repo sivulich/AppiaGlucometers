@@ -6,11 +6,12 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ProtocolV1 extends Protocol {
-
+    // This class implements the protocol V1 of communication with the Bioland G-500
     public ProtocolV1(SerialCommunicator comm){
         super(comm);
     }
 
+    // Define the packets of the protocol V1
     static public class AppReplyPacket extends AppPacket{
         public AppReplyPacket(Calendar now){
             super(now);
@@ -21,6 +22,7 @@ public class ProtocolV1 extends Protocol {
         }
 
     }
+
     static public class AppTerminationPacket extends AppPacket{
         public AppTerminationPacket(Calendar now){
             super(now);
@@ -153,22 +155,27 @@ public class ProtocolV1 extends Protocol {
         }
     }
 
+    // Override the set of functions that allow the FSM on the general protocol to use protocol V1.
     @Override
     protected AppPacket build_get_info_packet(Calendar calendar){
         return new AppReplyPacket(calendar);
     }
+
     @Override
     protected AppPacket build_get_meas_packet(Calendar calendar){
         return new AppReplyPacket(calendar);
     }
+
     @Override
     protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new InfoPacketV1(raw);
     }
+
     @Override
     protected ResultPacket build_result_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new ResultPacketV1(raw);
     }
+
     @Override
     protected DevicePacket build_end_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
         return new EndPacket(raw);
