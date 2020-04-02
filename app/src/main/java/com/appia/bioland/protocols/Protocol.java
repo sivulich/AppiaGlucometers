@@ -1,5 +1,6 @@
 package com.appia.bioland.protocols;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -211,49 +212,131 @@ public class Protocol {
         return new InfoPacket(raw);
     }
 
+    protected ResultPacket build_result_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new ResultPacket(raw);
+    }
+
+    protected DevicePacket build_end_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new DevicePacket(raw);
+    }
 
 
+    public Communication communicate(){
+        if (!serial.connected){
+            serial.connect();
+        }
+        if(!serial.connected)
+            return new Communication();
+        Communication comm = new Communication();
+        Calendar calendar = Calendar.getInstance();
+        AppPacket appReplyPacket = build_get_info_packet(calendar);
+        serial.send(appReplyPacket.to_bytes());
+        byte[] reply = serial.recieve();
+        try{
+            comm.infoPacket = build_info_packet(reply);
+        }catch (IllegalLengthException | IllegalContentException e){
+            comm.error = e.toString();
+            return comm;
+        }
+        comm.resultPackets = new ArrayList<>();
+        while(true){
+            appReplyPacket = build_get_meas_packet(calendar);
+            serial.send(appReplyPacket.to_bytes());
+            reply = serial.recieve();
+            try{
+                ResultPacket resultPacket = new ResultPacket(reply);
+                if(comm.resultPackets == null)
+                    comm.resultPackets = new ArrayList<>();
+                comm.resultPackets.add(resultPacket);
 
+            }catch (IllegalLengthException | IllegalContentException e){
+                try {
+                    comm.endPacket = build_end_packet(reply);
+                    return comm;
+                } catch (IllegalLengthException | IllegalContentException k){
+                    comm.error = k.toString();
+                    return comm;
+                }
+            }
+        }
+    }
 
+    public boolean asyncStartCommunication(){
+        if (!serial.connected){
+            serial.connect();
+        }
+        if(!serial.connected)
+            return false;
+        asyncCom = new Communication();
+        Calendar calendar = Calendar.getInstance();
+        AppPacket appReplyPacket = build_get_info_packet(calendar);
+        serial.send(appReplyPacket.to_bytes());
+        asyncState = AsyncState.WAITING_INFO_PACKET;
+        return true;
+    }
 
-//    public Communication communicate(){
-//        if (!serial.connected){
-//            serial.connect();
-//        }
-//        if(!serial.connected)
-//            return new Communication();
-//        Communication comm = new Communication();
-//        Calendar calendar = Calendar.getInstance();
-//        AppPacket appReplyPacket = build_get_info_packet();
-//        serial.send(appReplyPacket.to_bytes());
-//        byte[] reply = serial.recieve();
-//        try{
-//            comm.infoPacket = new InfoPacketV1(reply);
-//        }catch (IllegalLengthException | IllegalContentException e){
-//            comm.error = e.toString();
-//            return comm;
-//        }
-//        comm.resultPackets = new ArrayList<>();
-//        while(true){
-//            appReplyPacket = new AppReplyPacket(calendar);
-//            serial.send(appReplyPacket.to_bytes());
-//            reply = serial.recieve();
-//            try{
-//                ResultPacket resultPacket = new ResultPacket(reply);
-//                if(comm.resultPackets == null)
-//                    comm.resultPackets = new ArrayList<>();
-//                comm.resultPackets.add(resultPacket);
-//
-//            }catch (IllegalLengthException | IllegalContentException e){
-//                try {
-//                    comm.endPacket = new EndPacket(reply);
-//                    return comm;
-//                } catch (IllegalLengthException | IllegalContentException k){
-//                    comm.error = k.toString();
-//                    return comm;
-//                }
-//            }
-//        }
-//    }
+    public boolean asyncDoneCommunication(){
+        return (asyncState == AsyncState.DONE);
+    }
+
+    public Communication asyncGetCommunication(){
+        return asyncCom;
+    }
+
+    public void asyncCallbackReceive(byte[] packet){
+        switch (asyncState){
+            case WAITING_INFO_PACKET:
+                try{
+                    //Parse the information packet
+                    asyncCom.infoPacket = build_info_packet(packet);
+
+                    //Change state to waiting for results or end packet
+                    asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
+
+                    //Create the reply packet and send it
+                    Calendar calendar = Calendar.getInstance();
+                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
+                    serial.send(appReplyPacket.to_bytes());
+                }catch (IllegalLengthException | IllegalContentException e){
+                    //If an error occurred load it to communication
+                    asyncCom.error = e.toString();
+                    asyncState = AsyncState.DONE;
+                }
+                break;
+            case WAITING_RESULT_OR_END_PACKET:
+                try{
+                    //Try to parse as a result packet
+                    ResultPacket resultPacket = build_result_packet(packet);
+                    if(asyncCom.resultPackets == null)
+                        asyncCom.resultPackets = new ArrayList<>();
+                    asyncCom.resultPackets.add(resultPacket);
+
+                    //Create the reply packet and send it
+                    Calendar calendar = Calendar.getInstance();
+                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
+                    serial.send(appReplyPacket.to_bytes());
+                }catch (IllegalLengthException | IllegalContentException e){
+                    //If controlled exception occurred
+                    try {
+                        //Try to parse as End Packet
+                        asyncCom.endPacket = build_end_packet(packet);
+                        asyncState = AsyncState.DONE;
+                    } catch (IllegalLengthException | IllegalContentException k){
+                        asyncCom.error = k.toString();
+                        asyncState = AsyncState.DONE;
+                    }
+                }
+                break;
+
+            //If entered this function in DONE state an error ocurred, should clear communication
+            case DONE:
+            default:
+                asyncCom = new Communication();
+                asyncCom.error = "Received a packet after communication is done";
+                asyncState = AsyncState.DONE;
+                break;
+        }
+    }
+
 
 }

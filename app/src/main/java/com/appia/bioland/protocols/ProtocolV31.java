@@ -211,118 +211,24 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
-    public Communication communicate(){
-        if (!serial.connected){
-            serial.connect();
-        }
-        if(!serial.connected)
-            return new Communication();
-        Communication comm = new Communication();
-        Calendar calendar = Calendar.getInstance();
-        AppInfoPacket appInfoPacket = new AppInfoPacket(calendar);
-        serial.send(appInfoPacket.to_bytes());
-        byte[] reply = serial.recieve();
-        try{
-            comm.infoPacket = new InfoPacketV31(reply);
-        }catch (IllegalLengthException | IllegalContentException e){
-            comm.error = e.toString();
-            return comm;
-        }
-        comm.resultPackets = new ArrayList<>();
-
-        while(true){
-            AppDataPacket appDataPacket = new AppDataPacket(calendar);
-            serial.send(appDataPacket.to_bytes());
-            reply = serial.recieve();
-            try{
-                comm.resultPackets.add(new ResultPacketV31(reply));
-
-            }catch (IllegalLengthException | IllegalContentException e){
-                try {
-                    comm.endPacket = new EndPacket(reply);
-                    return comm;
-                } catch (IllegalLengthException | IllegalContentException k){
-                    comm.error = k.toString();
-                    return comm;
-                }
-            }
-        }
+    @Override
+    protected AppPacket build_get_info_packet(Calendar calendar){
+        return new AppInfoPacket(calendar);
     }
-
-    public boolean asyncStartCommunication(){
-        if (!serial.connected){
-            serial.connect();
-        }
-        if(!serial.connected)
-            return false;
-        asyncCom = new Communication();
-        Calendar calendar = Calendar.getInstance();
-        AppInfoPacket appReplyPacket = new AppInfoPacket(calendar);
-        serial.send(appReplyPacket.to_bytes());
-        asyncState = AsyncState.WAITING_INFO_PACKET;
-        return true;
+    @Override
+    protected AppPacket build_get_meas_packet(Calendar calendar){
+        return new AppDataPacket(calendar);
     }
-
-    public boolean asyncDoneCommunication(){
-        return (asyncState == AsyncState.DONE);
+    @Override
+    protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new InfoPacketV31(raw);
     }
-
-    public Communication asyncGetCommunication(){
-        return asyncCom;
+    @Override
+    protected ResultPacket build_result_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new ResultPacketV31(raw);
     }
-
-    public void asyncCallbackReceive(byte[] packet){
-        switch (asyncState){
-            case WAITING_INFO_PACKET:
-                try{
-                    //Parse the information packet
-                    asyncCom.infoPacket = new InfoPacketV31(packet);
-
-                    //Change state to waiting for results or end packet
-                    asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
-
-                    //Create the reply packet and send it
-                    Calendar calendar = Calendar.getInstance();
-                    AppDataPacket appReplyPacket = new AppDataPacket(calendar);
-                    serial.send(appReplyPacket.to_bytes());
-                }catch (IllegalLengthException | IllegalContentException e){
-                    //If an error occurred load it to communication
-                    asyncCom.error = e.toString();
-                    asyncState = AsyncState.DONE;
-                }
-                break;
-            case WAITING_RESULT_OR_END_PACKET:
-                try{
-                    //Try to parse as a result packet
-                    ResultPacketV31 resultPacket = new ResultPacketV31(packet);
-                    if(asyncCom.resultPackets == null)
-                        asyncCom.resultPackets = new ArrayList<>();
-                    asyncCom.resultPackets.add(resultPacket);
-
-                    //Create the reply packet and send it
-                    Calendar calendar = Calendar.getInstance();
-                    AppDataPacket appReplyPacket = new AppDataPacket(calendar);
-                    serial.send(appReplyPacket.to_bytes());
-                }catch (IllegalLengthException | IllegalContentException e){
-                    //If controlled exception occurred
-                    try {
-                        //Try to parse as End Packet
-                        asyncCom.endPacket = new EndPacket(packet);
-                        asyncState = AsyncState.DONE;
-                    } catch (IllegalLengthException | IllegalContentException k){
-                        asyncCom.error = k.toString();
-                        asyncState = AsyncState.DONE;
-                    }
-                }
-                break;
-
-            //If entered this function in DONE state an error ocurred, should clear communication
-            case DONE:
-            default:
-                asyncCom = new Communication();
-                asyncCom.error = "Received a packet after communication is done";
-                asyncState = AsyncState.DONE;
-                break;
-        }
+    @Override
+    protected DevicePacket build_end_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new EndPacket(raw);
     }
 }
