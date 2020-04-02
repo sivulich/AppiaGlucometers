@@ -13,7 +13,7 @@ public class Protocol {
     protected enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     protected AsyncState asyncState;
 
-
+    // This class abstracts the protocol from the User
     public Protocol(SerialCommunicator ser){
         serial = ser;
         ser.connect();
