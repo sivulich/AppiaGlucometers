@@ -141,6 +141,7 @@ public class Protocol {
     }
 
 
+
     static public class AppPacket extends ProtocolPacket{
         byte year;
         byte month;
@@ -188,8 +189,8 @@ public class Protocol {
 
 
     static public class Communication{
-        public DevicePacket infoPacket;
-        public List<DevicePacket> resultPackets;
+        public InfoPacket infoPacket;
+        public List<ResultPacket> resultPackets;
         public DevicePacket endPacket;
         public String error;
 
