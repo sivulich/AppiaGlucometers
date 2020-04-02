@@ -95,6 +95,52 @@ public class Protocol {
         }
     }
 
+    static public class ResultPacket extends DevicePacket{
+        byte year;
+        byte month;
+        byte day;
+        byte hour;
+        byte min;
+        byte retain;
+        byte[] glucose;
+
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 9];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length+0] = year;
+            bytes[parentBytes.length+1] = month;
+            bytes[parentBytes.length+2] = day;
+            bytes[parentBytes.length+3] = hour;
+            bytes[parentBytes.length+5] = min;
+            bytes[parentBytes.length+6] = retain;
+            bytes[parentBytes.length+7] = glucose[0];
+            bytes[parentBytes.length+8] = glucose[1];
+            return bytes;
+        }
+
+        public ResultPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+            super(raw);
+            if (startCode != (byte)0x55)
+                throw new IllegalContentException("StartCode must be 0x55");
+            if (packetCategory != (byte)0x03)
+                throw new IllegalContentException("PacketCategory must be 0x03");
+            year = raw[3];
+            month = raw[4];
+            day = raw[5];
+            hour = raw[6];
+            min = raw[7];
+            retain = raw[8];
+            glucose = new byte[2];
+            glucose[0] = raw[9];
+            glucose[1] = raw[10];
+        }
+    }
+
+
     static public class AppPacket extends ProtocolPacket{
         byte year;
         byte month;

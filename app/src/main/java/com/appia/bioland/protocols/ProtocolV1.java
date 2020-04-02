@@ -100,38 +100,13 @@ public class ProtocolV1 extends Protocol {
         }
     }
 
-    static public class ResultPacket extends DevicePacket{
-        byte year;
-        byte month;
-        byte day;
-        byte hour;
-        byte min;
-        byte save;
-        byte[] glucose;
+    static public class ResultPacketV1 extends ResultPacket{
 
-        @Override
-        protected byte[] getVariablesInByteArray(){
-            byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 8];
-            for(int i=0;i<parentBytes.length;i++){
-                bytes[i] = parentBytes[i];
-            }
-            bytes[parentBytes.length+0] = year;
-            bytes[parentBytes.length+1] = month;
-            bytes[parentBytes.length+2] = day;
-            bytes[parentBytes.length+3] = hour;
-            bytes[parentBytes.length+4] = min;
-            bytes[parentBytes.length+4] = save;
-            bytes[parentBytes.length+4] = glucose[0];
-            bytes[parentBytes.length+4] = glucose[1];
-            return bytes;
-        }
-
-        public ResultPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        public ResultPacketV1(byte[] raw) throws IllegalLengthException, IllegalContentException {
             super(raw);
+
             if (raw.length != 14)
                 throw new IllegalLengthException("Packet length must be 14");
-
             if (startCode != 0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
             if (packetLength != 0x0E)
@@ -139,15 +114,6 @@ public class ProtocolV1 extends Protocol {
             if (packetCategory != 0x03)
                 throw new IllegalContentException("PacketCategory must be 0x03");
 
-            year = raw[3];
-            month = raw[4];
-            day = raw[5];
-            hour = raw[6];
-            min = raw[7];
-            save = raw[8];
-            glucose = new byte[2];
-            glucose[0] = raw[9];
-            glucose[1] = raw[10];
             checksum = new byte[3];
             checksum[0] = raw[11];
             checksum[1] = raw[12];
@@ -159,7 +125,7 @@ public class ProtocolV1 extends Protocol {
             int big = (int) (startCode &0xff) +
                     (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (year&0xff) +
                     (int) (month&0xff) + (int) (day&0xff) + (int) (hour&0xff) + (int) (min&0xff) +
-                    (int) (save&0xff);
+                    (int) (retain&0xff);
             big += measurement;
             int check = (int) (checksum[0]&0xff) + (int) ((checksum[1]&0xff)<<8) + (int) ((checksum[2]&0xff)<<16);
 
@@ -214,7 +180,7 @@ public class ProtocolV1 extends Protocol {
             serial.send(appReplyPacket.to_bytes());
             reply = serial.recieve();
             try{
-                ResultPacket resultPacket = new ResultPacket(reply);
+                ResultPacketV1 resultPacket = new ResultPacketV1(reply);
                 if(comm.resultPackets == null)
                     comm.resultPackets = new ArrayList<>();
                 comm.resultPackets.add(resultPacket);
@@ -276,7 +242,7 @@ public class ProtocolV1 extends Protocol {
             case WAITING_RESULT_OR_END_PACKET:
                 try{
                     //Try to parse as a result packet
-                    ResultPacket resultPacket = new ResultPacket(packet);
+                    ResultPacketV1 resultPacket = new ResultPacketV1(packet);
                     if(asyncCom.resultPackets == null)
                         asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);

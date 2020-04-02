@@ -166,65 +166,26 @@ public class ProtocolV32 extends Protocol {
         }
     }
 
-    static public class ResultPacket extends DevicePacket{
-        byte year;
-        byte month;
-        byte day;
-        byte hour;
-        byte min;
-        byte retain;
-        byte[] glucose;
+    static public class ResultPacketV32 extends ResultPacket {
 
-        public ResultPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+
+        public ResultPacketV32(byte[] raw) throws IllegalLengthException, IllegalContentException {
             super(raw);
             if (raw.length != 12)
                 throw new IllegalLengthException("Packet length must be 14");
-
             if (startCode != (byte)0x55)
                 throw new IllegalContentException("StartCode must be 0x55");
-
             if (packetLength != (byte)0x0C)
                 throw new IllegalContentException("PacketLength must be 0x0C");
-
             if (packetCategory != (byte)0x03)
                 throw new IllegalContentException("PacketCategory must be 0x03");
 
-            year = raw[3];
-            month = raw[4];
-            day = raw[5];
-            hour = raw[6];
-            min = raw[7];
-            retain = raw[8];
-            glucose = new byte[2];
-            glucose[0] = raw[9];
-            glucose[1] = raw[10];
-
             calculateChecksum(1);
-
-            //Double check for inconsitency in documentation
-            if(!(checksum[0] == raw[11] || (checksum[0]+(byte)2) == raw[11]))
+            if( !(checksum[0] == raw[11] || (checksum[0]+(byte)2) == raw[11]) )
                 throw new IllegalContentException("Checksum Does Not Match");
-        }
 
-        @Override
-        protected byte[] getVariablesInByteArray(){
-            byte[] parentBytes = super.getVariablesInByteArray();
-            byte[] bytes = new byte[parentBytes.length + 8];
-            for(int i=0;i<parentBytes.length;i++){
-                bytes[i] = parentBytes[i];
-            }
-            bytes[parentBytes.length+0] = year;
-            bytes[parentBytes.length+1] = month;
-            bytes[parentBytes.length+2] = day;
-            bytes[parentBytes.length+3] = hour;
-            bytes[parentBytes.length+4] = min;
-            bytes[parentBytes.length+5] = retain;
-            bytes[parentBytes.length+6] = glucose[0];
-            bytes[parentBytes.length+7] = glucose[1];
-            return bytes;
         }
     }
-
     static public class EndPacket extends DevicePacket{
         byte retain;
 
@@ -278,7 +239,7 @@ public class ProtocolV32 extends Protocol {
             serial.send(appDataPacket.to_bytes());
             reply = serial.recieve();
             try{
-                comm.resultPackets.add(new ResultPacket(reply));
+                comm.resultPackets.add(new ResultPacketV32(reply));
 
             }catch (IllegalLengthException | IllegalContentException e){
                 try {
@@ -337,7 +298,7 @@ public class ProtocolV32 extends Protocol {
             case WAITING_RESULT_OR_END_PACKET:
                 try{
                     //Try to parse as a result packet
-                    ResultPacket resultPacket = new ResultPacket(packet);
+                    ResultPacketV32 resultPacket = new ResultPacketV32(packet);
                     if(asyncCom.resultPackets == null)
                         asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);
