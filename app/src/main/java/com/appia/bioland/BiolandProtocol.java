@@ -105,8 +105,7 @@ class BiolandProtocol {
             deviceInfo.protocolVersion = bytes[3];
             deviceInfo.batteryCapacity = bytes[5];
             deviceInfo.serialNumber = Arrays.copyOfRange(bytes,8,16);
-            //mProductionDate.set(year + 1900, month, 1); Only in protocol V1
-
+            //productionDate.set(year + 1900, month, 1); Only in protocol V1
 
             Log.d(TAG, "Info received: Bat="+ deviceInfo.batteryCapacity + "% ProtocolVersion = " + deviceInfo.protocolVersion + " SerialN: " + deviceInfo.serialNumber.toString() );
 
@@ -116,7 +115,9 @@ class BiolandProtocol {
         //else if(packet.type() ==Protocol::MEASUREMENT_PACKET)
         else if(bytes[2]==3) {
             /* Cancel previous timeout. */
-            mTimer.cancel();
+            if(mTimer != null) {
+                mTimer.cancel();
+            }
 
             BiolandMeasurement measurement = new BiolandMeasurement();
             measurement.glucoseConcentration = (float)(((bytes[10]&0x000000FF)<<8)+ (bytes[9]&0x000000FF));

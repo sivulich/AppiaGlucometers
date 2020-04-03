@@ -158,7 +158,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	}
 
 	public void onInformationReceived() {
-		// Update device information
+		// TODO: Show device information
 		runOnUiThread(() -> {
 
 		});
@@ -206,9 +206,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	}
 
 	private void setOperationInProgress(final boolean progress) {
-		runOnUiThread(() -> {
-			controlPanelStd.setVisibility(!progress ? View.VISIBLE : View.GONE);
-		});
+		runOnUiThread(() -> controlPanelStd.setVisibility(!progress ? View.VISIBLE : View.GONE));
 	}
 //
 //	public class MeasurementsListAdapter extends BaseExpandableListAdapter {
