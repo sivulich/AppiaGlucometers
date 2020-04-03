@@ -1,21 +1,34 @@
 package com.appia.bioland;
 
-import no.nordicsemi.android.ble.BleManagerCallbacks;
 
-import android.bluetooth.BluetoothDevice;
-import androidx.annotation.NonNull;
+import java.util.ArrayList;
 
-public interface BiolandCallbacks extends BleManagerCallbacks {
+/**
+ * This interface is called by the protocol and must be implemented by the class which manages the
+ * device and uses the protocol.
+ */
+public interface ProtocolCallbacks  {
 
     /**
-     * Called when a communication starts with the device.
+     *
+     * @param bytes
      */
-    void onCommunicationStarted();
+    void sendData(final byte[] bytes);
 
-    void onMeasurementsReceived();
+    /**
+     *
+     * @param aMeasurements
+     */
+    void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements);
 
-    void onDeviceInfoReceived();
+    /**
+     *
+     * @param aInfo
+     */
+    void onDeviceInfoReceived(BiolandInfo aInfo);
 
-    void onProtocolError();
-
+    /**
+     *
+     */
+    void onProtocolError(String aMessage);
 }

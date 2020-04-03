@@ -72,14 +72,14 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		findViewById(R.id.action_info).setOnClickListener(
 				v -> {
 					if(mBinder!=null) {
-						mBinder.readDeviceInfo();
+						mBinder.requestDeviceInfo();
 						setOperationInProgress(true);
 					}});
 
 		findViewById(R.id.action_read).setOnClickListener(
 				v -> {
 					if(mBinder!=null) {
-						mBinder.readMeasurements();
+						mBinder.requestMeasurements();
 						setOperationInProgress(true);
 					}});
 		// todo TBD Action
@@ -117,6 +117,12 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		runOnUiThread(() -> batteryLevelView.setText(R.string.not_available));
 	}
 
+	@Override
+	public void onDeviceConnected(@NonNull final BluetoothDevice device) {
+		super.onDeviceConnected(device);
+
+	}
+
 
 	@Override
 	protected int getAboutTextId() {
@@ -138,7 +144,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 			// Todo: Deberia chequear si esta bindeado?
 			if(mBinder!=null) {
 				mMeasurements = mBinder.getMeasurements();
-				if (mMeasurements.size() > 0) {
+				if (mMeasurements != null &&mMeasurements.size() > 0) {
 					//final int unit = mMeasurements.valueAt(0).unit;
 					unitView.setVisibility(View.VISIBLE);
 					unitView.setText(R.string.gls_unit_mgpdl);
@@ -179,7 +185,8 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 			}
 			else if(BiolandService.BROADCAST_COMM_FAILED.equals(action)) {
 				Log.d(TAG,"Broadcast communication failed received! Binder is: " + mBinder);
-				showToast("Error in Bioland Protocol");
+				String msg = intent.getStringExtra(BiolandService.EXTRA_ERROR_MESSAGE);
+				showToast("Error: " + msg);
 				setOperationInProgress(false);
 			}
 		}

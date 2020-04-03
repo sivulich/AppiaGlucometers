@@ -22,38 +22,25 @@
 
 package com.appia.bioland;
 
-import com.appia.bioland.BiolandCallbacks;
-
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import android.text.TextUtils;
 import android.util.Log;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.GregorianCalendar;
-import java.util.Iterator;
-import java.util.ArrayList;
-import java.util.Calendar;
 
-import java.util.ListIterator;
-import java.util.Timer;
-import java.util.TimerTask;
+
 import java.util.UUID;
 import java.lang.String;
+import java.util.ArrayList;
 
 import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.WriteRequest;
-import no.nordicsemi.android.ble.data.Data;
 
 
-public class BiolandManager extends BleManager<BiolandCallbacks> {
+public class BiolandManager extends BleManager<BiolandCallbacks> implements ProtocolCallbacks{
 	/** Bioland communication service UUID */
 	public final static UUID BIOLAND_SERVICE_UUID = UUID.fromString("00001000-0000-1000-8000-00805f9b34fb");
 	/** RX characteristic UUID */
@@ -65,27 +52,6 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 
 	private BluetoothGattCharacteristic mRxCharacteristic, mTxCharacteristic;
 
-	private ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<BiolandMeasurement>();
-
-	private int mProtocolVersion;
-	private int mBatteryCapacity;
-	private Calendar mProductionDate;
-	private byte[] mSerialNumber;
-
-	Timer mTimer;
-
-	TimerTask mSendPacketTask;
-
-	byte[] mMessage;
-
-	/**
-	 * A flag indicating whether Long Write can be used. It's set to false if the UART RX
-	 * characteristic has only PROPERTY_WRITE_NO_RESPONSE property and no PROPERTY_WRITE.
-	 * If you set it to false here, it will never use Long Write.
-	 *
-	 * TODO change this flag if you don't want to use Long Write even with Write Request.
-	 */
-	private boolean useLongWrite = true;
 
 	/**
 	 * Bioland Manager constructor
@@ -95,50 +61,18 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 		super(context);
 	}
 
-
-
 	/**
 	 * Sends the request to obtain all the records stored in the device.
 	 */
-	public void readMeasurements() {
-
-		mCallbacks.onCommunicationStarted();
-		// Protocol initiation
-		// TODO: Santi
-		mMessage = hexStringToByteArray("5A0A031005020F213BEB");
-
-		if(mTimer==null) {
-			mTimer = new Timer();
-		}
-		mSendPacketTask = new TimerTask(){
-			@Override
-			public void run() {
-				send(mMessage);
-			}
-		};
-		mTimer.scheduleAtFixedRate(mSendPacketTask, 1000, 300);
+	public void requestMeasurements(){
+		mProtocol.requestMeasurements();
 	}
 
 	/**
 	 * Sends the request to obtain the device information.
 	 */
-	public void readDeviceInfo() {
-		// Protocol initiate
-		// TODO: Santi
-
-		// INFO READ PACKER
-		mMessage = hexStringToByteArray("5A0A001005020F213BE8");
-
-		if(mTimer==null) {
-			mTimer = new Timer();
-		}
-		mSendPacketTask = new TimerTask(){
-			@Override
-			public void run() {
-				send(mMessage);
-			}
-		};
-		mTimer.scheduleAtFixedRate(mSendPacketTask, 1000, 300);
+	public void requestDeviceInfo(){
+		mProtocol.requestDeviceInfo();
 	}
 
 	/**
@@ -161,13 +95,13 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 	 *
 	 * @return
 	 */
-	public int getBatteryCapacity() {return mBatteryCapacity;}
+	public int getBatteryCapacity() {return mInfo.batteryCapacity;}
 
 	/**
 	 *
 	 * @return
 	 */
-	public byte[] getSerialNumber() {return mSerialNumber;}
+	public byte[] getSerialNumber() {return mInfo.serialNumber;}
 
 	@NonNull
 	@Override
@@ -192,7 +126,8 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 
 				setNotificationCallback(mTxCharacteristic)
 						.with((device, data) -> {
-							onDataReceived(device,data);
+							Log.v(TAG,  data.toString() + " received");
+							mProtocol.onDataReceived(data.getValue());
 						});
 
 				enableNotifications(mTxCharacteristic)
@@ -224,7 +159,6 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 				//if (writeRequest)
 					mRxCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
 				//else
-					useLongWrite = false;
 			}
 
 			return mRxCharacteristic != null && mTxCharacteristic != null && (writeRequest || writeCommand);
@@ -235,113 +169,42 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 			// Release all references.
 			mRxCharacteristic = null;
 			mTxCharacteristic = null;
-			useLongWrite = true;
 		}
 	}
 
-	private void onDataReceived(@NonNull final BluetoothDevice device, @NonNull final Data data){
+	public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
 
-		Log.d(TAG, "\"" + data.toString() + "\" received!!!");
+		/* Store received measurements. */
+		mMeasurements = aMeasurements;
 
-		byte[] bytes = data.getValue();
-
-//		// Build packet from bytes received
-//		ProtocolPacket packet = new ProtocolPacket(bytes);
-//
-//		// Check checksum and packet length
-//		if(packet.isValid()==false){
-//			// Should retry a predefined number of times and if it keeps failing communicate
-//			// upper layer of communication error.
-//			mRetries++;
-//			if(mRetries==5) {
-//				mSendPacketTask.cancel();
-//				mCallbacks.onCommunicationFailed();
-//			}
-//			return;
-//		}
-//		// Packet is valid, reset retries counter.
-//		mRetries = 0;
-
-		//if(packet.type() ==Protocol::INFORMATION_PACKET)
-		if(bytes[2]==0){
-
-			mProtocolVersion = bytes[3];
-			mBatteryCapacity = bytes[5];
-			mSerialNumber = Arrays.copyOfRange(bytes,8,16);
-			//mProductionDate.set(year + 1900, month, 1); Only in protocol V1
-
-			/*Stop communication*/
-			mSendPacketTask.cancel();
-
-			Log.d(TAG, "INFORMATION PACKET RECEIVED: Bat="+ mBatteryCapacity + "% ProtocolVersion = " + mProtocolVersion + " SerialN: " + mSerialNumber.toString() );
-			// Notify device information has been read
-			mCallbacks.onInformationRead();
-		}
-		//else if(packet.type() ==Protocol::MEASUREMENT_PACKET)
-		else if(bytes[2]==3) {
-			BiolandMeasurement measurement = new BiolandMeasurement();
-			measurement.glucoseConcentration = (float)(((bytes[10]&0x000000FF)<<8)+ (bytes[9]&0x000000FF));
-			measurement.date = new GregorianCalendar();
-			measurement.date.set(bytes[3],bytes[4],bytes[5],bytes[6],bytes[7]);
-
-			mMeasurements.add(measurement);
-			Log.d(TAG, "MEASUREMENT PACKET RECEIVED: " + measurement.glucoseConcentration + "mg/dl" + measurement.date);
-		}
-		//else if(packet.type() ==Protocol::END_PACKET)
-		else if(bytes[2]==5) {
-			Log.d(TAG, "END PACKET RECEIVED!!");
-
-			/*Stop communication*/
-			mSendPacketTask.cancel();
-
-			// Notify new measurements were read.
-			mCallbacks.onMeasurementsRead();
-		}
-		//else if(packet.type() ==Protocol::HANDSHAKE_PACKET)
-		else if(bytes[2]==9) {
-			Log.d(TAG, "HANDSHAKE PACKET RECEIVED!!");
-
-		}
-		// Si hay algun momento hay un error en el protocolo llamar a:
-		//mCallbacks.onCommunicationFailed();
+		/* Notify new measurements were received. */
+		mCallbacks.onMeasurementsReceived();
 	}
-	/**
-	 * Sends the given text to RX characteristic.
-	 * @param text the text to be sent
-	 */
-	private void send(final String text) {
-		// Are we connected?
-		if (mRxCharacteristic == null) {
-			Log.d(TAG,"Tried to send data but mRxCharacteristic was null: " + text);
-			return;
-		}
+	public void onDeviceInfoReceived(BiolandInfo aInfo) {
 
-		if (!TextUtils.isEmpty(text)) {
-			final WriteRequest request = writeCharacteristic(mRxCharacteristic, text.getBytes())
-					.with((device, data) -> Log.d(TAG,
-							"\"" + data.getStringValue(0) + "\" sent"));
-			//if (!useLongWrite) {
-				// This will automatically split the long data into MTU-3-byte long packets.
-				request.split();
-			//}
-			request.enqueue();
-		}
+		/* Store received info. */
+		mInfo = aInfo;
+
+		/* Notify info was received. */
+		mCallbacks.onDeviceInfoReceived();
 	}
-
+	public void onProtocolError(String aMessage) {
+		mCallbacks.onProtocolError(aMessage);
+	}
 	/**
 	 * Sends the given bytes to RX characteristic.
 	 * @param bytes the text to be sent
 	 */
-	private void send(final byte[] bytes) {
+	public void sendData(final byte[] bytes) {
 		// Are we connected?
 		if (mRxCharacteristic == null) {
-			Log.d(TAG,"Tried to send data but mRxCharacteristic was null: " + bytes.toString());
+			Log.e(TAG,"Tried to send data but mRxCharacteristic was null: " + bytes.toString());
 			return;
 		}
 
 		if (bytes != null && bytes.length > 0) {
 			final WriteRequest request = writeCharacteristic(mRxCharacteristic, bytes)
-					.with((device, data) -> Log.d(TAG,
+					.with((device, data) -> Log.v(TAG,
 							"\"" + data.toString() + "\" sent"));
 			//if (!useLongWrite) {
 			// This will automatically split the long data into MTU-3-byte long packets.
@@ -351,13 +214,7 @@ public class BiolandManager extends BleManager<BiolandCallbacks> {
 		}
 	}
 
-	private static byte[] hexStringToByteArray(String s) {
-		int len = s.length();
-		byte[] data = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-					+ Character.digit(s.charAt(i+1), 16));
-		}
-		return data;
-	}
+	private BiolandProtocol mProtocol = new BiolandProtocol(this);
+	BiolandInfo mInfo;
+	private ArrayList<BiolandMeasurement> mMeasurements;
 }

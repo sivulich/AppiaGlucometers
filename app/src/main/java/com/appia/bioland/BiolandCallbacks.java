@@ -7,15 +7,10 @@ import androidx.annotation.NonNull;
 
 public interface BiolandCallbacks extends BleManagerCallbacks {
 
-    /**
-     * Called when a communication starts with the device.
-     */
-    void onCommunicationStarted();
+    void onMeasurementsReceived();
 
-    void onMeasurementsRead();
+    void onDeviceInfoReceived();
 
-    void onInformationRead();
-
-    void onCommunicationFailed();
+    void onProtocolError(String aMessage);
 
 }

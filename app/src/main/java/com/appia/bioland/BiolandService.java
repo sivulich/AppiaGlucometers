@@ -68,7 +68,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
 
 
     public static final String BROADCAST_COMM_FAILED = "com.appia.bioland.uart.BROADCAST_COMM_FAILED";
-    public static final String EXTRA_ERROR_STRING = "com.appia.bioland.uart.EXTRA_ERROR_STRING";
+    public static final String EXTRA_ERROR_MSG = "com.appia.bioland.uart.EXTRA_ERROR_MSG";
 
     //public static final String EXTRA_GLUCOSE_VALUE = "com.appia.bioland.uart.EXTRA_GLUCOSE_VALUE";
     // TODO: Agregar campos EXTRA??
@@ -99,18 +99,18 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         /**
          * Send a request to read new measurements
          */
-        public void readMeasurements(){
+        public void requestMeasurements(){
             if(isConnected()) {
-                mManager.readMeasurements();
+                mManager.requestMeasurements();
             }
         }
 
         /**
          * Send a request to read device information.
          */
-        public void readDeviceInfo(){
+        public void requestDeviceInfo(){
             if(isConnected()) {
-                mManager.readDeviceInfo();
+                mManager.requestDeviceInfo();
             }
         }
     }
@@ -127,7 +127,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      * Called by BiolandManager when all measurements were received.
      */
-    public void onMeasurementsRead() {
+    public void onMeasurementsReceived() {
         final Intent broadcast = new Intent(BROADCAST_MEASUREMENT);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
@@ -135,7 +135,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      * Called by BiolandManager when device information is received..
      */
-    public void onInformationRead() {
+    public void onDeviceInfoReceived() {
         final Intent broadcast = new Intent(BROADCAST_INFORMATION);
         broadcast.putExtra(EXTRA_BATTERY_CAPACITY,mManager.getBatteryCapacity());
         broadcast.putExtra(EXTRA_SERIAL_NUMBER,mManager.getSerialNumber());
@@ -145,8 +145,9 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      * Called by BiolandManager when an error has occured in the communication with the device.
      */
-    public void onCommunicationFailed() {
+    public void onProtocolError(String aMessage) {
         final Intent broadcast = new Intent(BROADCAST_COMM_FAILED);
+        broadcast.putExtra(EXTRA_ERROR_MSG,aMessage);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 
@@ -213,7 +214,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         // If activity is not bounded, service is running in background.
         // Read measurements when device connects!
         if(bound == false) {
-            mManager.readMeasurements();
+            mManager.requestMeasurements();
         }
     }
 
