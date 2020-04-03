@@ -1,6 +1,5 @@
 package com.appia.bioland;
 
-
 import java.util.GregorianCalendar;
 
 public class BiolandInfo {
