@@ -2,18 +2,17 @@ package com.appia.bioland.protocols;
 
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class Protocol {
+public abstract class Protocol {
     // Abstracts serial communication
     private ProtocolCallbacks protocolCallbacks;
     // Allows to hold state for communication protocol agnostic
     private Communication asyncCom;
 
-    protected String version;
+    protected Version version;
 
     // All protocols have the following states.
     protected enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
@@ -71,8 +70,10 @@ public class Protocol {
                     /* Notify application. */
                     // TODO!!! Fill
                     BiolandInfo info = new BiolandInfo();
+//                    //Check if protocol version is higher than one
+//                    if (version.compareTo(new Version("1.0")) == 1)
                     info.batteryCapacity = 0;
-                    info.protocolVersion = 40;
+                    info.protocolVersion = asyncCom.infoPacket.versionCode&0Xff;
                     info.serialNumber = new byte[]{1,2,3,4};
                     protocolCallbacks.onDeviceInfoReceived(info);
 

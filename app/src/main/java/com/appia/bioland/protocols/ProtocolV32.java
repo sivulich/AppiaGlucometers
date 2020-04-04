@@ -8,6 +8,7 @@ public class ProtocolV32 extends Protocol {
     // This class implements the protocol V3.2 of communication with the Bioland G-500
     public ProtocolV32(ProtocolCallbacks aCallbacks){
         super(aCallbacks);
+        version = new Version("3.2");
     }
     // Define the packets of the protocol V3.2
     static public class AppPacketV32 extends AppPacket{

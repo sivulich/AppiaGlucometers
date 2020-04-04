@@ -9,6 +9,7 @@ public class ProtocolV2 extends Protocol{
     // This class implements the protocol V2 of communication with the Bioland G-500
     public ProtocolV2(ProtocolCallbacks aCallbacks){
         super(aCallbacks);
+        version = new Version("2.0");
     }
     // Define the packets of the protocol V2
     static public class AppPacketV2 extends AppPacket{

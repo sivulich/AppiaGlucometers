@@ -8,6 +8,7 @@ public class ProtocolV31 extends Protocol {
     // This class implements the protocol V3.1 of communication with the Bioland G-500
     public ProtocolV31(ProtocolCallbacks aCallbacks){
         super(aCallbacks);
+        version = new Version("3.1");
     }
     // Define the packets of the protocol V3.1
     static public class AppPacketV31 extends AppPacket{
