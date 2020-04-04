@@ -88,7 +88,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
          */
         public void requestDeviceInfo(){
             if(isConnected()) {
-                mManager.requestDeviceInfo();
+                //mManager.requestDeviceInfo(); // Todo:
             }
         }
     }

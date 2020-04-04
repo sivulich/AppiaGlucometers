@@ -6,10 +6,9 @@ import java.util.List;
 
 public class ProtocolV32 extends Protocol {
     // This class implements the protocol V3.2 of communication with the Bioland G-500
-    public ProtocolV32(SerialCommunicator ser){
-        super(ser);
+    public ProtocolV32(ProtocolCallbacks aCallbacks){
+        super(aCallbacks);
     }
-
     // Define the packets of the protocol V3.2
     static public class AppPacketV32 extends AppPacket{
 

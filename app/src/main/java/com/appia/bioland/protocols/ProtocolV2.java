@@ -7,10 +7,9 @@ import java.util.List;
 
 public class ProtocolV2 extends Protocol{
     // This class implements the protocol V2 of communication with the Bioland G-500
-    public ProtocolV2(SerialCommunicator comm){
-        super(comm);
+    public ProtocolV2(ProtocolCallbacks aCallbacks){
+        super(aCallbacks);
     }
-
     // Define the packets of the protocol V2
     static public class AppPacketV2 extends AppPacket{
         byte second;

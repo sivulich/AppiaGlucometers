@@ -1,5 +1,8 @@
-package com.appia.bioland;
+package com.appia.bioland.protocols;
 
+
+import com.appia.bioland.BiolandInfo;
+import com.appia.bioland.BiolandMeasurement;
 
 import java.util.ArrayList;
 

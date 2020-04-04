@@ -8,7 +8,9 @@ import androidx.annotation.NonNull;
 
 import android.util.Log;
 
-
+import com.appia.bioland.protocols.Protocol;
+import com.appia.bioland.protocols.ProtocolV32;
+import com.appia.bioland.protocols.ProtocolCallbacks;
 
 import java.util.UUID;
 import java.lang.String;
@@ -18,7 +20,7 @@ import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.WriteRequest;
 
 
-public class BiolandManager extends BleManager<BiolandCallbacks> implements ProtocolCallbacks{
+public class BiolandManager extends BleManager<BiolandCallbacks> implements ProtocolCallbacks {
 	/** Bioland communication service UUID */
 	public final static UUID BIOLAND_SERVICE_UUID = UUID.fromString("00001000-0000-1000-8000-00805f9b34fb");
 	/** RX characteristic UUID */
@@ -43,15 +45,14 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	 * Sends the request to obtain all the records stored in the device.
 	 */
 	public void requestMeasurements(){
-		mProtocol.requestMeasurements();
+		mProtocol.startCommunication();
 	}
 
 	/**
 	 * Sends the request to obtain the device information.
 	 */
-	public void requestDeviceInfo(){
-		mProtocol.requestDeviceInfo();
-	}
+	//public void getDeviceInfo();
+
 
 	/**
 	 * Returns all measurements as a array.
@@ -193,7 +194,7 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		}
 	}
 
-	private BiolandProtocol mProtocol = new BiolandProtocol(this);
+	private Protocol mProtocol = new ProtocolV32(this);
 	private ArrayList<BiolandMeasurement> mMeasurements;
 	private BiolandInfo mInfo;
 }

@@ -7,8 +7,8 @@ import java.util.List;
 
 public class ProtocolV1 extends Protocol {
     // This class implements the protocol V1 of communication with the Bioland G-500
-    public ProtocolV1(SerialCommunicator comm){
-        super(comm);
+    public ProtocolV1(ProtocolCallbacks aCallbacks){
+        super(aCallbacks);
     }
 
     // Define the packets of the protocol V1

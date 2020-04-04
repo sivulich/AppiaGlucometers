@@ -2,15 +2,29 @@ package com.appia.bioland;
 
 import androidx.annotation.NonNull;
 
-import java.util.GregorianCalendar;
+import java.util.Calendar;
 
 public class BiolandMeasurement {
 
+    public BiolandMeasurement(float aGlucose,int aYear,
+            int aMonth, int aDay, int aHour, int aMin) {
+        mGlucose = aGlucose;
+        mYear = aYear;
+        mMonth = aMonth;
+        mDay = aDay;
+        mHour = aHour;
+        mMin = aMin;
+
+    }
     /** The glucose concentration */
-    float glucoseConcentration;
+    float mGlucose;
 
     /** The base time of the measurement */
-    GregorianCalendar date;
+    int mYear;
+    int mMonth;
+    int mDay;
+    int mHour;
+    int mMin;
 
     @NonNull
     @Override

@@ -1,22 +1,27 @@
 package com.appia.bioland.protocols;
 
+import com.appia.bioland.BiolandInfo;
+import com.appia.bioland.BiolandMeasurement;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 public class Protocol {
     // Abstracts serial communication
-    protected SerialCommunicator serial;
+    private ProtocolCallbacks protocolCallbacks;
     // Allows to hold state for communication protocol agnostic
-    protected Communication asyncCom;
+    private Communication asyncCom;
+
+    protected String version;
+
     // All protocols have the following states.
     protected enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
-    protected AsyncState asyncState;
+    private AsyncState asyncState;
 
     // This class abstracts the protocol from the User
-    public Protocol(SerialCommunicator ser){
-        serial = ser;
-        ser.connect();
+    public Protocol(ProtocolCallbacks aCallbacks){
+        protocolCallbacks = aCallbacks;
         asyncState=AsyncState.DONE;
     }
 
@@ -32,77 +37,44 @@ public class Protocol {
         }
     }
 
-    // This function tries to read in a synchronous manner all the measurements
-    public Communication communicate(){
-        if (!serial.connected){
-            serial.connect();
-        }
-        if(!serial.connected)
-            return new Communication();
-        Communication comm = new Communication();
-        Calendar calendar = Calendar.getInstance();
-        AppPacket appReplyPacket = build_get_info_packet(calendar);
-        serial.send(appReplyPacket.to_bytes());
-        byte[] reply = serial.recieve();
-        try{
-            comm.infoPacket = build_info_packet(reply);
-        }catch (IllegalLengthException | IllegalContentException e){
-            comm.error = e.toString();
-            return comm;
-        }
-        comm.resultPackets = new ArrayList<>();
-        while(true){
-            appReplyPacket = build_get_meas_packet(calendar);
-            serial.send(appReplyPacket.to_bytes());
-            reply = serial.recieve();
-            try{
-                ResultPacket resultPacket = new ResultPacket(reply);
-                if(comm.resultPackets == null)
-                    comm.resultPackets = new ArrayList<>();
-                comm.resultPackets.add(resultPacket);
-
-            }catch (IllegalLengthException | IllegalContentException e){
-                try {
-                    comm.endPacket = build_end_packet(reply);
-                    return comm;
-                } catch (IllegalLengthException | IllegalContentException k){
-                    comm.error = k.toString();
-                    return comm;
-                }
-            }
-        }
-    }
-
     // This set of functions allow an asynchronous communication to the device
     // This function starts the communication
-    public boolean asyncStartCommunication(){
+    public boolean startCommunication(){
         if(asyncState!= AsyncState.DONE)
             return false;
         asyncCom = new Communication();
         Calendar calendar = Calendar.getInstance();
         AppPacket appReplyPacket = build_get_info_packet(calendar);
-        serial.send(appReplyPacket.to_bytes());
+        protocolCallbacks.sendData(appReplyPacket.to_bytes());
         asyncState = AsyncState.WAITING_INFO_PACKET;
         return true;
     }
 
     // This function tells you if the communication is done
-    public boolean asyncDoneCommunication(){
+    public boolean doneCommunication(){
         return (asyncState == AsyncState.DONE);
     }
 
     // This function returns the current communication
-    public Communication asyncGetCommunication(){
+    public Communication getCommunication(){
         return asyncCom;
     }
 
     // This function should be called when a bluetooth packet is received
-    public void asyncCallbackReceive(byte[] packet){
+    public void onDataReceived(byte[] packet){
         switch (asyncState){
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
                     asyncCom.infoPacket = build_info_packet(packet);
+
+                    /* Notify application. */
+                    // TODO!!! Fill
+                    BiolandInfo info = new BiolandInfo();
+                    info.batteryCapacity = 0;
+                    info.protocolVersion = 40;
+                    info.serialNumber = new byte[]{1,2,3,4};
+                    protocolCallbacks.onDeviceInfoReceived(info);
 
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
@@ -110,11 +82,12 @@ public class Protocol {
                     //Create the reply packet and send it
                     Calendar calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
-                    serial.send(appReplyPacket.to_bytes());
+                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If an error occurred load it to communication
                     asyncCom.error = e.toString();
                     asyncState = AsyncState.DONE;
+                    protocolCallbacks.onProtocolError(asyncCom.error);
                 }
                 break;
             case WAITING_RESULT_OR_END_PACKET:
@@ -128,16 +101,31 @@ public class Protocol {
                     //Create the reply packet and send it
                     Calendar calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
-                    serial.send(appReplyPacket.to_bytes());
+                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If controlled exception occurred
                     try {
                         //Try to parse as End Packet
                         asyncCom.endPacket = build_end_packet(packet);
                         asyncState = AsyncState.DONE;
+
+                        ArrayList<BiolandMeasurement> arr = new ArrayList<>();
+
+                        for(int i=0; i<asyncCom.resultPackets.size(); i++) {
+                            ResultPacket p = asyncCom.resultPackets.get(i);
+                            arr.add(new BiolandMeasurement(p.getGlucose(),
+                                    2000+p.year&0xff,
+                                    p.month&0xff,
+                                    p.day&0xff,
+                                    p.hour&0xff,
+                                    p.min&0xff));
+                        }
+                        protocolCallbacks.onMeasurementsReceived(arr);
+
                     } catch (IllegalLengthException | IllegalContentException k){
                         asyncCom.error = k.toString();
                         asyncState = AsyncState.DONE;
+                        protocolCallbacks.onProtocolError(asyncCom.error);
                     }
                 }
                 break;
@@ -148,6 +136,7 @@ public class Protocol {
                 asyncCom = new Communication();
                 asyncCom.error = "Received a packet after communication is done";
                 asyncState = AsyncState.DONE;
+                protocolCallbacks.onProtocolError(asyncCom.error);
                 break;
         }
     }
