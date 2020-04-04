@@ -1,4 +1,5 @@
 package com.appia.bioland;
+import com.appia.bioland.protocols.Protocol;
 import com.appia.bioland.protocols.ProtocolV32;
 import com.appia.bioland.protocols.ProtocolCallbacks;
 
@@ -18,6 +19,7 @@ public class CommunicatorV32Test {
                 assertEquals(data[0], (byte)0x5A);
                 assertEquals(data[1], (byte)0x0A);
                 assertEquals(data[2], (byte)0x00);
+                assertEquals(data.length, 10);
                 status+=1;
             }
             else if(status>1){
@@ -81,7 +83,7 @@ public class CommunicatorV32Test {
     @Test
     public void protocolAsyncV32IsCorrect() {
         SerialCommunicatorTester ser = new SerialCommunicatorTester();
-        ProtocolV32 protocol = new ProtocolV32(ser);
+        Protocol protocol = new ProtocolV32(ser);
 
         //Sent firts packet
         boolean start = protocol.startCommunication();

@@ -215,6 +215,11 @@ public class ProtocolV32 extends Protocol {
 
         }
     }
+//    @Override
+//    protected byte[] build_handshake_packet(){
+//        AppHandshakePacket packet = new AppHandshakePacket();
+//        return packet.to_bytes();
+//    }
 
     // Override the set of functions that allow the FSM on the general protocol to use protocol V3.2.
     @Override

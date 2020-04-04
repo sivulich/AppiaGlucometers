@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.appia.bioland.protocols.Protocol;
+import com.appia.bioland.protocols.ProtocolV1;
 import com.appia.bioland.protocols.ProtocolV32;
 import com.appia.bioland.protocols.ProtocolCallbacks;
 

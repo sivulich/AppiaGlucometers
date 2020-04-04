@@ -15,7 +15,7 @@ public abstract class Protocol {
     protected Version version;
 
     // All protocols have the following states.
-    protected enum AsyncState {WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
+    protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
 
     // This class abstracts the protocol from the User
@@ -39,14 +39,26 @@ public abstract class Protocol {
     // This set of functions allow an asynchronous communication to the device
     // This function starts the communication
     public boolean startCommunication(){
-        if(asyncState!= AsyncState.DONE)
-            return false;
+//        if(asyncState!= AsyncState.DONE)
+//            return false;
         asyncCom = new Communication();
-        Calendar calendar = Calendar.getInstance();
-        AppPacket appReplyPacket = build_get_info_packet(calendar);
-        protocolCallbacks.sendData(appReplyPacket.to_bytes());
-        asyncState = AsyncState.WAITING_INFO_PACKET;
-        return true;
+
+        byte[] handshake = build_handshake_packet();
+        if (handshake.length == 0)
+        {
+            Calendar calendar = Calendar.getInstance();
+            AppPacket appReplyPacket = build_get_info_packet(calendar);
+            protocolCallbacks.sendData(appReplyPacket.to_bytes());
+//        protocolCallbacks.sendData(appReplyPacket.to_bytes());
+            asyncState = AsyncState.WAITING_INFO_PACKET;
+            return true;
+        }
+        else{
+            protocolCallbacks.sendData(handshake);
+            asyncState = AsyncState.WAITING_HANDSHAKE_PACKET;
+            return true;
+        }
+
     }
 
     // This function tells you if the communication is done
@@ -61,7 +73,14 @@ public abstract class Protocol {
 
     // This function should be called when a bluetooth packet is received
     public void onDataReceived(byte[] packet){
+        Calendar calendar;
         switch (asyncState){
+            case WAITING_HANDSHAKE_PACKET:
+                calendar = Calendar.getInstance();
+                AppPacket afterHandshakePacket = build_get_info_packet(calendar);
+                protocolCallbacks.sendData(afterHandshakePacket.to_bytes());
+                asyncState = AsyncState.WAITING_INFO_PACKET;
+                break;
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
@@ -81,7 +100,7 @@ public abstract class Protocol {
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
 
                     //Create the reply packet and send it
-                    Calendar calendar = Calendar.getInstance();
+                    calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
                     protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
@@ -100,7 +119,7 @@ public abstract class Protocol {
                     asyncCom.resultPackets.add(resultPacket);
 
                     //Create the reply packet and send it
-                    Calendar calendar = Calendar.getInstance();
+                    calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
                     protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
@@ -292,10 +311,10 @@ public abstract class Protocol {
 
         public AppPacket(Calendar calendar){
             super();
-            year = (byte) calendar.get(Calendar.YEAR);
+            year = (byte) (calendar.get(Calendar.YEAR)-2000);
             month = (byte) calendar.get(Calendar.MONTH);
             day = (byte) calendar.get(Calendar.DAY_OF_MONTH);
-            hour = (byte) calendar.get(Calendar.HOUR);
+            hour = (byte) calendar.get(Calendar.HOUR_OF_DAY);
             min = (byte) calendar.get(Calendar.MINUTE);
         }
     }
@@ -307,6 +326,10 @@ public abstract class Protocol {
 
     protected AppPacket build_get_meas_packet(Calendar calendar){
         return new AppPacket(calendar);
+    }
+
+    protected byte[] build_handshake_packet(){
+        return new byte[0];
     }
 
     protected InfoPacket build_info_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
