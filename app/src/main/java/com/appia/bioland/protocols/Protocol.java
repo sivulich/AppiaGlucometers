@@ -1,5 +1,7 @@
 package com.appia.bioland.protocols;
 
+import android.util.Log;
+
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
@@ -8,6 +10,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 
 public abstract class Protocol {
@@ -23,8 +26,9 @@ public abstract class Protocol {
     protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
     private int retries_on_current_packet;
-    private int MAX_RETRIES = 10;
-    private int DELAY = 500;
+    private int MAX_RETRIES = 20;
+    private int DELAY = 2000;
+    private int DELAY_BETWEEN_PACKETS=200;
 
     private static Timer timer;
     private static Semaphore  mutex = new Semaphore(1);
@@ -62,9 +66,9 @@ public abstract class Protocol {
         if (handshake.length == 0)
         {
             Calendar calendar = Calendar.getInstance();
-            AppPacket appReplyPacket = build_get_info_packet(calendar);
+            AppPacket appReplyPacket = build_get_meas_packet(calendar);
             protocolCallbacks.sendData(appReplyPacket.to_bytes());
-            asyncState = AsyncState.WAITING_INFO_PACKET;
+            asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
         }
         else{
             protocolCallbacks.sendData(handshake);
@@ -77,6 +81,7 @@ public abstract class Protocol {
                 resendPacket();
             }
         }, DELAY);
+        retries_on_current_packet = 0;
         mutex.release(1);
         return true;
     }
@@ -100,7 +105,8 @@ public abstract class Protocol {
         }catch (java.lang.InterruptedException a){
             return;
         }
-
+        timer.cancel();
+        timer = new Timer();
         switch (asyncState){
             case WAITING_HANDSHAKE_PACKET:
                 calendar = Calendar.getInstance();
@@ -112,7 +118,12 @@ public abstract class Protocol {
                 try{
                     //Parse the information packet
                     asyncCom.infoPacket = build_info_packet(packet);
-
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+                    }catch (java.lang.InterruptedException a){
+                        mutex.release(1);
+                        return;
+                    }
                     /* Notify application. */
                     // TODO!!! Fill
                     BiolandInfo info = new BiolandInfo();
@@ -144,7 +155,12 @@ public abstract class Protocol {
                     if(asyncCom.resultPackets == null)
                         asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);
-
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+                    }catch (java.lang.InterruptedException a){
+                        mutex.release(1);
+                        return;
+                    }
                     //Create the reply packet and send it
                     calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
@@ -157,16 +173,16 @@ public abstract class Protocol {
                         asyncState = AsyncState.DONE;
 
                         ArrayList<BiolandMeasurement> arr = new ArrayList<>();
-
-                        for(int i=0; i<asyncCom.resultPackets.size(); i++) {
-                            ResultPacket p = asyncCom.resultPackets.get(i);
-                            arr.add(new BiolandMeasurement(p.getGlucose(),
-                                    2000+p.year&0xff,
-                                    p.month&0xff,
-                                    p.day&0xff,
-                                    p.hour&0xff,
-                                    p.min&0xff));
-                        }
+                        if(asyncCom.resultPackets!= null)
+                            for(int i=0; i<asyncCom.resultPackets.size(); i++) {
+                                ResultPacket p = asyncCom.resultPackets.get(i);
+                                arr.add(new BiolandMeasurement(p.getGlucose(),
+                                        2000+p.year&0xff,
+                                        p.month&0xff,
+                                        p.day&0xff,
+                                        p.hour&0xff,
+                                        p.min&0xff));
+                            }
                         protocolCallbacks.onMeasurementsReceived(arr);
 
                     } catch (IllegalLengthException | IllegalContentException k){
@@ -195,6 +211,7 @@ public abstract class Protocol {
                 }
             }, DELAY);
         }
+        retries_on_current_packet=0;
         mutex.release(1);
     }
 
@@ -232,6 +249,7 @@ public abstract class Protocol {
             retries_on_current_packet = 0;
             asyncState = AsyncState.DONE;
             asyncCom.error = "Max retries reached on current state";
+            protocolCallbacks.onProtocolError(asyncCom.error);
         }
         mutex.release(1);
     }
