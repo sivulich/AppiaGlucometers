@@ -5,6 +5,10 @@ import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Semaphore;
+
 
 public abstract class Protocol {
     // Abstracts serial communication
@@ -12,16 +16,24 @@ public abstract class Protocol {
     // Allows to hold state for communication protocol agnostic
     private Communication asyncCom;
 
+    // Contains the current protocol version
     protected Version version;
 
     // All protocols have the following states.
     protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
+    private int retries_on_current_packet;
+    private int MAX_RETRIES = 10;
+    private int DELAY = 500;
+
+    private static Timer timer;
+    private static Semaphore  mutex = new Semaphore(1);
 
     // This class abstracts the protocol from the User
     public Protocol(ProtocolCallbacks aCallbacks){
         protocolCallbacks = aCallbacks;
         asyncState=AsyncState.DONE;
+        timer = new Timer();
     }
 
     // This class holds a communication with an Bioland G-500 device
@@ -39,26 +51,34 @@ public abstract class Protocol {
     // This set of functions allow an asynchronous communication to the device
     // This function starts the communication
     public boolean startCommunication(){
-//        if(asyncState!= AsyncState.DONE)
-//            return false;
-        asyncCom = new Communication();
 
+        try {
+            mutex.acquire();
+        }catch (java.lang.InterruptedException a){
+            return false;
+        }
+        asyncCom = new Communication();
         byte[] handshake = build_handshake_packet();
         if (handshake.length == 0)
         {
             Calendar calendar = Calendar.getInstance();
             AppPacket appReplyPacket = build_get_info_packet(calendar);
             protocolCallbacks.sendData(appReplyPacket.to_bytes());
-//        protocolCallbacks.sendData(appReplyPacket.to_bytes());
             asyncState = AsyncState.WAITING_INFO_PACKET;
-            return true;
         }
         else{
             protocolCallbacks.sendData(handshake);
             asyncState = AsyncState.WAITING_HANDSHAKE_PACKET;
-            return true;
-        }
 
+        }
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                resendPacket();
+            }
+        }, DELAY);
+        mutex.release(1);
+        return true;
     }
 
     // This function tells you if the communication is done
@@ -74,6 +94,13 @@ public abstract class Protocol {
     // This function should be called when a bluetooth packet is received
     public void onDataReceived(byte[] packet){
         Calendar calendar;
+
+        try {
+            mutex.acquire();
+        }catch (java.lang.InterruptedException a){
+            return;
+        }
+
         switch (asyncState){
             case WAITING_HANDSHAKE_PACKET:
                 calendar = Calendar.getInstance();
@@ -159,6 +186,54 @@ public abstract class Protocol {
                 protocolCallbacks.onProtocolError(asyncCom.error);
                 break;
         }
+
+        if (asyncState != AsyncState.DONE){
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    resendPacket();
+                }
+            }, DELAY);
+        }
+        mutex.release(1);
+    }
+
+    // This function retries the packet send
+    public void resendPacket(){
+        try {
+            mutex.acquire();
+        }catch (java.lang.InterruptedException a){
+            return;
+        }
+        if (retries_on_current_packet<MAX_RETRIES){
+            retries_on_current_packet+=1;
+            Calendar calendar;
+            switch (asyncState){
+                case WAITING_INFO_PACKET:
+                    calendar = Calendar.getInstance();
+                    AppPacket appInfoPacket = build_get_info_packet(calendar);
+                    protocolCallbacks.sendData(appInfoPacket.to_bytes());
+                    break;
+                case WAITING_RESULT_OR_END_PACKET:
+                    calendar = Calendar.getInstance();
+                    AppPacket appDataPacket = build_get_meas_packet(calendar);
+                    protocolCallbacks.sendData(appDataPacket.to_bytes());
+                    break;
+                case DONE:
+                    break;
+            }
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    resendPacket();
+                }
+            }, DELAY);
+        } else {
+            retries_on_current_packet = 0;
+            asyncState = AsyncState.DONE;
+            asyncCom.error = "Max retries reached on current state";
+        }
+        mutex.release(1);
     }
 
     // Define all class of packets in protocols, abstracting the version of the protocol
