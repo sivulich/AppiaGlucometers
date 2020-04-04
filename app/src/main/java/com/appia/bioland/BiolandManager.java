@@ -96,6 +96,7 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		protected void initialize() {
 			if(isConnected()) {
 
+				// TODO: Sacar
 				requestMtu(100)
 						.with((device, mtu) -> Log.d(TAG, "MTU changed to " + mtu))
 						.done(device -> {})
@@ -193,6 +194,6 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	}
 
 	private BiolandProtocol mProtocol = new BiolandProtocol(this);
-	BiolandInfo mInfo;
 	private ArrayList<BiolandMeasurement> mMeasurements;
+	private BiolandInfo mInfo;
 }

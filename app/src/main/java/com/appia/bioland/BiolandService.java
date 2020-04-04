@@ -96,13 +96,6 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     private final LocalBinder mBinder = new BiolandBinder();
 
     /**
-     *  Callback called by BiolandManager
-     */
-    public void onCommunicationStarted(){
-        // Nothing to do
-    }
-
-    /**
      * Called by BiolandManager when all measurements were received.
      */
     public void onMeasurementsReceived() {
