@@ -17,6 +17,7 @@ public class Protocol {
     public Protocol(SerialCommunicator ser){
         serial = ser;
         ser.connect();
+        asyncState=AsyncState.DONE;
     }
 
     // This class holds a communication with an Bioland G-500 device
@@ -75,10 +76,7 @@ public class Protocol {
     // This set of functions allow an asynchronous communication to the device
     // This function starts the communication
     public boolean asyncStartCommunication(){
-        if (!serial.connected){
-            serial.connect();
-        }
-        if(!serial.connected)
+        if(asyncState!= AsyncState.DONE)
             return false;
         asyncCom = new Communication();
         Calendar calendar = Calendar.getInstance();
