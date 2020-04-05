@@ -1,7 +1,5 @@
 package com.appia.bioland.protocols;
 
-import android.util.Log;
-
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
@@ -27,8 +25,9 @@ public abstract class Protocol {
     private AsyncState asyncState;
     private int retries_on_current_packet;
     private int MAX_RETRIES = 20;
-    private int DELAY = 2000;
-    private int DELAY_BETWEEN_PACKETS=200;
+    private int RETRY_DELAY = 1000;
+    private int DELAY_AFTER_RECEIVED = 200;
+    private static int CHECKSUM_OFFSET = 2;
 
     private static Timer timer;
     private static Semaphore  mutex = new Semaphore(1);
@@ -61,27 +60,30 @@ public abstract class Protocol {
         }catch (java.lang.InterruptedException a){
             return false;
         }
+//        try {
+//            TimeUnit.MILLISECONDS.sleep(DELAY_AFTER_RECEIVED);
+//        }catch (java.lang.InterruptedException a){
+//            mutex.release(1);
+//            return false;
+//        }
         asyncCom = new Communication();
-        byte[] handshake = build_handshake_packet();
-        if (handshake.length == 0)
-        {
-            Calendar calendar = Calendar.getInstance();
-            AppPacket appReplyPacket = build_get_meas_packet(calendar);
-            protocolCallbacks.sendData(appReplyPacket.to_bytes());
-            asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
-        }
-        else{
-            protocolCallbacks.sendData(handshake);
-            asyncState = AsyncState.WAITING_HANDSHAKE_PACKET;
-
-        }
+//        try {
+//            TimeUnit.MILLISECONDS.sleep(2000);
+//        }catch (java.lang.InterruptedException a){
+//            mutex.release(1);
+//            return false;
+//        }
+        Calendar calendar = Calendar.getInstance();
+        AppPacket appReplyPacket = build_get_info_packet(calendar);
+        protocolCallbacks.sendData(appReplyPacket.to_bytes());
+        asyncState = AsyncState.WAITING_INFO_PACKET;
+        retries_on_current_packet = 0;
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                resendPacket();
+                sendPacket();
             }
-        }, DELAY);
-        retries_on_current_packet = 0;
+        }, RETRY_DELAY);
         mutex.release(1);
         return true;
     }
@@ -108,22 +110,22 @@ public abstract class Protocol {
         timer.cancel();
         timer = new Timer();
         switch (asyncState){
-            case WAITING_HANDSHAKE_PACKET:
-                calendar = Calendar.getInstance();
-                AppPacket afterHandshakePacket = build_get_info_packet(calendar);
-                protocolCallbacks.sendData(afterHandshakePacket.to_bytes());
-                asyncState = AsyncState.WAITING_INFO_PACKET;
-                break;
+//            case WAITING_HANDSHAKE_PACKET:
+//                calendar = Calendar.getInstance();
+//                AppPacket afterHandshakePacket = build_get_info_packet(calendar);
+//                protocolCallbacks.sendData(afterHandshakePacket.to_bytes());
+//                asyncState = AsyncState.WAITING_INFO_PACKET;
+//                break;
             case WAITING_INFO_PACKET:
                 try{
                     //Parse the information packet
                     asyncCom.infoPacket = build_info_packet(packet);
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-                    }catch (java.lang.InterruptedException a){
-                        mutex.release(1);
-                        return;
-                    }
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+//                    }catch (java.lang.InterruptedException a){
+//                        mutex.release(1);
+//                        return;
+//                    }
                     /* Notify application. */
                     // TODO!!! Fill
                     BiolandInfo info = new BiolandInfo();
@@ -137,10 +139,10 @@ public abstract class Protocol {
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
 
-                    //Create the reply packet and send it
-                    calendar = Calendar.getInstance();
-                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
-                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
+//                    //Create the reply packet and send it
+//                    calendar = Calendar.getInstance();
+//                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
+//                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If an error occurred load it to communication
                     asyncCom.error = e.toString();
@@ -155,16 +157,16 @@ public abstract class Protocol {
                     if(asyncCom.resultPackets == null)
                         asyncCom.resultPackets = new ArrayList<>();
                     asyncCom.resultPackets.add(resultPacket);
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-                    }catch (java.lang.InterruptedException a){
-                        mutex.release(1);
-                        return;
-                    }
-                    //Create the reply packet and send it
-                    calendar = Calendar.getInstance();
-                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
-                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+//                    }catch (java.lang.InterruptedException a){
+//                        mutex.release(1);
+//                        return;
+//                    }
+//                    //Create the reply packet and send it
+//                    calendar = Calendar.getInstance();
+//                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
+//                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If controlled exception occurred
                     try {
@@ -207,16 +209,16 @@ public abstract class Protocol {
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    resendPacket();
+                    sendPacket();
                 }
-            }, DELAY);
+            }, DELAY_AFTER_RECEIVED);
         }
         retries_on_current_packet=0;
         mutex.release(1);
     }
 
     // This function retries the packet send
-    public void resendPacket(){
+    public void sendPacket(){
         try {
             mutex.acquire();
         }catch (java.lang.InterruptedException a){
@@ -230,21 +232,28 @@ public abstract class Protocol {
                     calendar = Calendar.getInstance();
                     AppPacket appInfoPacket = build_get_info_packet(calendar);
                     protocolCallbacks.sendData(appInfoPacket.to_bytes());
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            sendPacket();
+                        }
+                    }, RETRY_DELAY);
                     break;
                 case WAITING_RESULT_OR_END_PACKET:
                     calendar = Calendar.getInstance();
                     AppPacket appDataPacket = build_get_meas_packet(calendar);
                     protocolCallbacks.sendData(appDataPacket.to_bytes());
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            sendPacket();
+                        }
+                    }, RETRY_DELAY);
                     break;
                 case DONE:
                     break;
             }
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    resendPacket();
-                }
-            }, DELAY);
+
         } else {
             retries_on_current_packet = 0;
             asyncState = AsyncState.DONE;
@@ -263,7 +272,10 @@ public abstract class Protocol {
 
         protected void calculateChecksum(int length){
             byte[] bytes = getVariablesInByteArray();
-            int sum = 0;
+            int sum = CHECKSUM_OFFSET;
+//            if(bytes[2]==0x03){
+//                sum-= CHECKSUM_OFFSET;
+//            }
             for (int i=0; i< bytes.length;i++){
                 sum+= (int)(bytes[i]&0xff);
             }
