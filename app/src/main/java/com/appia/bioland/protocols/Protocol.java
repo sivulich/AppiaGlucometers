@@ -26,8 +26,8 @@ public abstract class Protocol {
     protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
     private int retries_on_current_packet;
-    private int MAX_RETRIES = 20;
-    private int DELAY = 2000;
+    private int MAX_RETRIES = 4;
+    private int DELAY = 1000;
     private int DELAY_BETWEEN_PACKETS=200;
 
     private static Timer timer;
@@ -73,7 +73,6 @@ public abstract class Protocol {
         else{
             protocolCallbacks.sendData(handshake);
             asyncState = AsyncState.WAITING_HANDSHAKE_PACKET;
-
         }
         timer.schedule(new TimerTask() {
             @Override
@@ -118,12 +117,12 @@ public abstract class Protocol {
                 try{
                     //Parse the information packet
                     asyncCom.infoPacket = build_info_packet(packet);
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-                    }catch (java.lang.InterruptedException a){
-                        mutex.release(1);
-                        return;
-                    }
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+//                    }catch (java.lang.InterruptedException a){
+//                        mutex.release(1);
+//                        return;
+//                    }
                     /* Notify application. */
                     // TODO!!! Fill
                     BiolandInfo info = new BiolandInfo();
@@ -152,15 +151,16 @@ public abstract class Protocol {
                 try{
                     //Try to parse as a result packet
                     ResultPacket resultPacket = build_result_packet(packet);
-                    if(asyncCom.resultPackets == null)
+                    if(asyncCom.resultPackets == null) {
                         asyncCom.resultPackets = new ArrayList<>();
-                    asyncCom.resultPackets.add(resultPacket);
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-                    }catch (java.lang.InterruptedException a){
-                        mutex.release(1);
-                        return;
                     }
+                    asyncCom.resultPackets.add(resultPacket);
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
+//                    }catch (java.lang.InterruptedException a){
+//                        mutex.release(1);
+//                        return;
+//                    }
                     //Create the reply packet and send it
                     calendar = Calendar.getInstance();
                     AppPacket appReplyPacket = build_get_meas_packet(calendar);
@@ -172,18 +172,19 @@ public abstract class Protocol {
                         asyncCom.endPacket = build_end_packet(packet);
                         asyncState = AsyncState.DONE;
 
-                        ArrayList<BiolandMeasurement> arr = new ArrayList<>();
-                        if(asyncCom.resultPackets!= null)
-                            for(int i=0; i<asyncCom.resultPackets.size(); i++) {
+                        if(asyncCom.resultPackets!= null) {
+                            ArrayList<BiolandMeasurement> arr = new ArrayList<>();
+                            for (int i = 0; i < asyncCom.resultPackets.size(); i++) {
                                 ResultPacket p = asyncCom.resultPackets.get(i);
-                                arr.add(new BiolandMeasurement(p.getGlucose(),
-                                        2000+p.year&0xff,
-                                        p.month&0xff,
-                                        p.day&0xff,
-                                        p.hour&0xff,
-                                        p.min&0xff));
+                                arr.add(new BiolandMeasurement(p.getGlucose()/(float)18,
+                                        2000 + p.year & 0xff,
+                                        p.month & 0xff,
+                                        p.day & 0xff,
+                                        p.hour & 0xff,
+                                        p.min & 0xff));
                             }
-                        protocolCallbacks.onMeasurementsReceived(arr);
+                            protocolCallbacks.onMeasurementsReceived(arr);
+                        }
 
                     } catch (IllegalLengthException | IllegalContentException k){
                         asyncCom.error = k.toString();
