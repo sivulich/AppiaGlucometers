@@ -31,7 +31,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 
 
 	///private MeasurementsListAdapter measurementList;
-	ArrayList<BiolandMeasurement> mMeasurements;
+	ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<>();
 	BiolandService.BiolandBinder mBinder;
 	private int mProtocolVersion;
 	private int mBatteryCapacity;
@@ -41,10 +41,6 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private View controlPanelStd;
 	private TextView unitView;
 
-	@Override
-	public void onConnectClicked(final View view) {
-		super.onConnectClicked(view);
-	}
 
 	@Override
 	protected void onCreateView(final Bundle savedInstanceState) {
@@ -142,11 +138,16 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		runOnUiThread(() -> {
 			// Todo: Deberia chequear si esta bindeado?
 			if(mBinder!=null) {
-				mMeasurements = mBinder.getMeasurements();
-				if (mMeasurements != null &&mMeasurements.size() > 0) {
+				ArrayList<BiolandMeasurement> newMeasurements = mBinder.getMeasurements();
+				if (newMeasurements != null) {
+					mMeasurements.addAll(newMeasurements);
+					for(int i=0; i<newMeasurements.size(); i++){
+						Log.d(TAG,"Measurement: " + newMeasurements.get(i));
+					}
 					//final int unit = mMeasurements.valueAt(0).unit;
 					unitView.setVisibility(View.VISIBLE);
 					unitView.setText(R.string.gls_unit_mgpdl);
+
 				} else {
 					unitView.setVisibility(View.GONE);
 				}
@@ -173,13 +174,14 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 
 			if (BiolandService.BROADCAST_MEASUREMENT.equals(action)) {
 				Log.d(TAG,"Broadcast measurement received! Binder is: " + mBinder);
+				onMeasurementsReceived();
 				setOperationInProgress(false);
 			}
 			else if(BiolandService.BROADCAST_INFORMATION.equals(action)) {
 				Log.d(TAG,"Broadcast information received! Binder is: " + mBinder);
 				mBatteryCapacity = intent.getIntExtra(BiolandService.EXTRA_BATTERY_CAPACITY,0);
 				mSerialNumber = intent.getByteArrayExtra(BiolandService.EXTRA_SERIAL_NUMBER);
-
+				onInformationReceived();
 				setOperationInProgress(false);
 			}
 			else if(BiolandService.BROADCAST_COMM_FAILED.equals(action)) {

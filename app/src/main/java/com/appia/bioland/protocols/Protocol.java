@@ -1,5 +1,7 @@
 package com.appia.bioland.protocols;
 
+import android.util.Log;
+
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
@@ -60,12 +62,6 @@ public abstract class Protocol {
         }catch (java.lang.InterruptedException a){
             return false;
         }
-//        try {
-//            TimeUnit.MILLISECONDS.sleep(DELAY_AFTER_RECEIVED);
-//        }catch (java.lang.InterruptedException a){
-//            mutex.release(1);
-//            return false;
-//        }
         asyncCom = new Communication();
 //        try {
 //            TimeUnit.MILLISECONDS.sleep(2000);
@@ -154,8 +150,9 @@ public abstract class Protocol {
                 try{
                     //Try to parse as a result packet
                     ResultPacket resultPacket = build_result_packet(packet);
-                    if(asyncCom.resultPackets == null)
+                    if(asyncCom.resultPackets == null) {
                         asyncCom.resultPackets = new ArrayList<>();
+                    }
                     asyncCom.resultPackets.add(resultPacket);
 //                    try {
 //                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
@@ -174,18 +171,19 @@ public abstract class Protocol {
                         asyncCom.endPacket = build_end_packet(packet);
                         asyncState = AsyncState.DONE;
 
-                        ArrayList<BiolandMeasurement> arr = new ArrayList<>();
-                        if(asyncCom.resultPackets!= null)
-                            for(int i=0; i<asyncCom.resultPackets.size(); i++) {
+                        if(asyncCom.resultPackets!= null) {
+                            ArrayList<BiolandMeasurement> arr = new ArrayList<>();
+                            for (int i = 0; i < asyncCom.resultPackets.size(); i++) {
                                 ResultPacket p = asyncCom.resultPackets.get(i);
-                                arr.add(new BiolandMeasurement(p.getGlucose(),
-                                        2000+p.year&0xff,
-                                        p.month&0xff,
-                                        p.day&0xff,
-                                        p.hour&0xff,
-                                        p.min&0xff));
+                                arr.add(new BiolandMeasurement(p.getGlucose()/(float)18,
+                                        2000 + p.year & 0xff,
+                                        p.month & 0xff,
+                                        p.day & 0xff,
+                                        p.hour & 0xff,
+                                        p.min & 0xff));
                             }
-                        protocolCallbacks.onMeasurementsReceived(arr);
+                            protocolCallbacks.onMeasurementsReceived(arr);
+                        }
 
                     } catch (IllegalLengthException | IllegalContentException k){
                         asyncCom.error = k.toString();
@@ -273,9 +271,6 @@ public abstract class Protocol {
         protected void calculateChecksum(int length){
             byte[] bytes = getVariablesInByteArray();
             int sum = CHECKSUM_OFFSET;
-//            if(bytes[2]==0x03){
-//                sum-= CHECKSUM_OFFSET;
-//            }
             for (int i=0; i< bytes.length;i++){
                 sum+= (int)(bytes[i]&0xff);
             }

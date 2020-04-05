@@ -3,9 +3,14 @@ package com.appia.bioland;
 import androidx.annotation.NonNull;
 
 import java.util.Calendar;
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
+import java.util.GregorianCalendar;
 
 public class BiolandMeasurement {
+    public BiolandMeasurement(){
 
+    }
     public BiolandMeasurement(float aGlucose,int aYear,
             int aMonth, int aDay, int aHour, int aMin) {
         mGlucose = aGlucose;
@@ -14,21 +19,23 @@ public class BiolandMeasurement {
         mDay = aDay;
         mHour = aHour;
         mMin = aMin;
-
     }
     /** The glucose concentration */
-    float mGlucose;
+    public float mGlucose;
 
     /** The base time of the measurement */
-    int mYear;
-    int mMonth;
-    int mDay;
-    int mHour;
-    int mMin;
+    public int mYear;
+    public int mMonth;
+    public int mDay;
+    public int mHour;
+    public int mMin;
+    public GregorianCalendar date;
 
     @NonNull
     @Override
     public String toString() {
-        return ""; // TODO
+        Calendar c = Calendar.getInstance(); //automatically set to current time
+        c.set(mYear,mMonth,mDay,mHour,mMin);
+        return mGlucose + "mmol/L @ " + DateFormat.getDateTimeInstance().format(c.getTime());
     }
 }

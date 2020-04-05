@@ -38,8 +38,7 @@
 		tools:text="1 Jan 2012 as 12:30:15"/>
 
 	<TextView
-		android:id="@+id/details"
-		android:layout_width="wrap_content"
+        android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_below="@+id/time"
 		android:layout_marginTop="2dp"
@@ -47,8 +46,7 @@
 		tools:text="Capilary Whole blood"/>
 
 	<TextView
-		android:id="@+id/gls_concentration"
-		android:layout_width="wrap_content"
+        android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_alignParentRight="true"
 		android:layout_centerVertical="true"
