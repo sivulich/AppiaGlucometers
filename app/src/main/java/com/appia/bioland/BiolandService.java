@@ -10,6 +10,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+// TODO
+import android.media.AudioAttributes;
+import android.provider.Settings;
+
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -37,25 +41,21 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      *  Measurement Broadcast!
      */
-    public static final String BROADCAST_MEASUREMENT = "com.appia.bioland.uart.BROADCAST_MEASUREMENT";
-    public static final String EXTRA_GLUCOSE_LEVEL = "com.appia.bioland.uart.EXTRA_GLUCOSE_LEVEL";
+    public static final String BROADCAST_MEASUREMENT = "com.appia.bioland.BROADCAST_MEASUREMENT";
+    public static final String EXTRA_GLUCOSE_LEVEL = "com.appia.bioland.EXTRA_GLUCOSE_LEVEL";
 
-    public static final String BROADCAST_INFORMATION = "com.appia.bioland.uart.BROADCAST_INFORMATION";
-    public static final String EXTRA_BATTERY_CAPACITY = "com.appia.bioland.uart.EXTRA_BATTERY_CAPACITY";
-    public static final String EXTRA_SERIAL_NUMBER = "com.appia.bioland.uart.EXTRA_SERIAL_NUMBER";
+    public static final String BROADCAST_INFORMATION = "com.appia.bioland.BROADCAST_INFORMATION";
+    public static final String EXTRA_BATTERY_CAPACITY = "com.appia.bioland.EXTRA_BATTERY_CAPACITY";
+    public static final String EXTRA_SERIAL_NUMBER = "com.appia.bioland.EXTRA_SERIAL_NUMBER";
 
 
-    public static final String BROADCAST_COMM_FAILED = "com.appia.bioland.uart.BROADCAST_COMM_FAILED";
-    public static final String EXTRA_ERROR_MSG = "com.appia.bioland.uart.EXTRA_ERROR_MSG";
-
-    //public static final String EXTRA_GLUCOSE_VALUE = "com.appia.bioland.uart.EXTRA_GLUCOSE_VALUE";
-    // TODO: Agregar campos EXTRA??
+    public static final String BROADCAST_COMM_FAILED = "com.appia.bioland.BROADCAST_COMM_FAILED";
+    public static final String EXTRA_ERROR_MSG = "com.appia.bioland.EXTRA_ERROR_MSG";
 
     /**
      * Action send when user press the DISCONNECT button on the notification.
      */
     public final static String ACTION_DISCONNECT = "com.appia.bioland.uart.ACTION_DISCONNECT";
-    public final static String ACTION_GET_MEASUREMENTS = "com.appia.bioland.uart.ACTION_GET_MEASUREMENTS";
 
     /* Notification things...*/
     private final static int NOTIFICATION_ID = 349; // random
@@ -65,7 +65,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /* Bioland manager. */
     private BiolandManager mManager;
 
-    /* This binder is an interface for the binded activity to operate with the device*/
+    /* This binder is an interface for the binded activity to operate with the device. */
     public class BiolandBinder extends LocalBinder {
         /**
          * Returns the measurements stored in the manager.
@@ -88,7 +88,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
          */
         public void requestDeviceInfo(){
             if(isConnected()) {
-                //mManager.requestDeviceInfo(); // Todo:
+                mManager.requestDeviceInfo(); // Todo:
             }
         }
     }
@@ -101,6 +101,11 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     public void onMeasurementsReceived() {
         final Intent broadcast = new Intent(BROADCAST_MEASUREMENT);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
+
+        if(!bound) {
+            ArrayList<BiolandMeasurement> measurements = mManager.getMeasurements();
+            createNotification(R.string.notification_new_measurements_message);
+        }
     }
 
     /**
@@ -175,17 +180,57 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     @Override
     public void onDeviceConnected(@NonNull final BluetoothDevice device) {
         super.onDeviceConnected(device);
-
+        Log.d(TAG,"Device connected");
+        if(!bound) {
+            updateNotification(R.string.notification_connected_message);
+        }
     }
+    @Override
+    public void onLinkLossOccurred(@NonNull final BluetoothDevice device) {
+       super.onLinkLossOccurred(device);
+
+        Log.d(TAG,"Link loss ocurred");
+        if(!bound) {
+            updateNotification(R.string.notification_disconnected_message);
+        }
+    }
+
+    @Override
+    public void onDeviceDisconnected(@NonNull final BluetoothDevice device) {
+        super.onDeviceDisconnected(device);
+        Log.d(TAG,"Device disconnected");
+        if(!bound) {
+            updateNotification(R.string.notification_disconnected_message);
+        }
+    }
+
 
     @Override
     public void onDeviceReady(@NonNull final BluetoothDevice device) {
         super.onDeviceReady(device);
 
-        // If activity is not bounded, service is running in background.
-        // Read measurements when device connects!
-        if(bound == false) {
-            mManager.requestMeasurements();
+        // Always read measurements when device connects!
+        mManager.requestMeasurements();
+
+    }
+
+    @Override
+    protected void onBluetoothDisabled(){
+
+    }
+
+    @Override
+    protected void onBluetoothEnabled(){
+        super.onBluetoothEnabled();
+
+        Log.d(TAG,"onBluetoothEnabled");
+
+
+        BluetoothDevice device =  getBluetoothDevice();
+
+        if (device != null && !isConnected()) {
+            Log.d(TAG,"Reconnecting...");
+            mManager.connect(getBluetoothDevice()).enqueue();
         }
     }
 
@@ -202,7 +247,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     private void startForegroundService() {
         // when the activity closes we need to show the notification that user is connected to the peripheral sensor
         // We start the service as a foreground service as Android 8.0 (Oreo) onwards kills any running background services
-        final Notification notification = createNotification(com.appia.bioland.R.string.uart_notification_connected_message, 0);
+        final Notification notification = createNotification(R.string.notification_connected_message);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForeground(NOTIFICATION_ID, notification);
         } else {
@@ -228,16 +273,26 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Foreground Service Channel",
+                    "Bioland Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             serviceChannel.setDescription(getString(R.string.channel_connected_devices_description));
             serviceChannel.setShowBadge(false);
             serviceChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            serviceChannel.enableVibration(true);
+            serviceChannel.setSound(Settings.System.DEFAULT_NOTIFICATION_URI,new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION).build());
 
             NotificationManager mManager = getSystemService(NotificationManager.class);
             mManager.createNotificationChannel(serviceChannel);
         }
+    }
+
+
+    protected void updateNotification(final int messageResId) {
+        Notification notification = createNotification(messageResId);
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(NOTIFICATION_ID, notification);
     }
 
     /**
@@ -245,24 +300,30 @@ public class BiolandService extends BleProfileService implements BiolandCallback
      *
      * @param messageResId message resource id. The message must have one String parameter,<br />
      *                     f.e. <code>&lt;string name="name"&gt;%s is connected&lt;/string&gt;</code>
-     * @param defaults     signals that will be used to notify the user
+
      */
     @SuppressWarnings("SameParameterValue")
-    protected Notification createNotification(final int messageResId, final int defaults) {
+    protected Notification createNotification(final int messageResId) {
 
-        final Intent intent = new Intent(this, BiolandActivity.class);
-
-        final Intent disconnect = new Intent(ACTION_DISCONNECT);
-        final PendingIntent disconnectAction = PendingIntent.getBroadcast(this, DISCONNECT_REQ, disconnect, PendingIntent.FLAG_UPDATE_CURRENT);
+        final Intent intent = new Intent(this, BiolandActivity.class)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
         // both activities above have launchMode="singleTask" in the AndroidManifest.xml file, so if the task is already running, it will be resumed
-        final PendingIntent pendingIntent = PendingIntent.getActivities(this, OPEN_ACTIVITY_REQ, new Intent[]{intent}, PendingIntent.FLAG_UPDATE_CURRENT);
-        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
-        builder.setContentIntent(pendingIntent);
-        builder.setContentTitle(getString(R.string.app_name)).setContentText(getString(messageResId, getDeviceName()));
-       // builder.setSmallIcon(R.drawable.ic_stat_notify_uart);
-        builder.setShowWhen(defaults != 0).setDefaults(defaults).setAutoCancel(true).setOngoing(true);
-        builder.addAction(new NotificationCompat.Action(R.drawable.ic_action_bluetooth, getString(R.string.uart_notification_action_disconnect), disconnectAction));
+        final PendingIntent pendingIntent = PendingIntent.getActivity(this, OPEN_ACTIVITY_REQ, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentIntent(pendingIntent)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(messageResId, getDeviceName()))
+                .setSmallIcon(R.drawable.ic_stat_notify_cgms)
+                .setShowWhen(true)
+                .setAutoCancel(true)
+                .setOngoing(true);
+
+        if(isConnected()){
+            final Intent disconnect = new Intent(ACTION_DISCONNECT);
+            final PendingIntent disconnectAction = PendingIntent.getBroadcast(this, DISCONNECT_REQ, disconnect, PendingIntent.FLAG_UPDATE_CURRENT);
+            builder.addAction(new NotificationCompat.Action(R.drawable.ic_action_bluetooth, getString(R.string.notification_action_disconnect), disconnectAction));
+        }
 
         return builder.build();
     }

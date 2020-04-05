@@ -53,7 +53,7 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	/**
 	 * Sends the request to obtain the device information.
 	 */
-	//public void getDeviceInfo();
+	public void requestDeviceInfo(){/*mProtocol.requestDeviceInfo();*/}
 
 
 	/**
