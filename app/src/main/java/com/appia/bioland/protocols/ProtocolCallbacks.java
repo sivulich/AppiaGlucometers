@@ -20,6 +20,12 @@ public interface ProtocolCallbacks  {
 
     /**
      *
+     * @param aValue
+     */
+    void onCountdownReceived(int aValue);
+
+    /**
+     *
      * @param aMeasurements
      */
     void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements);

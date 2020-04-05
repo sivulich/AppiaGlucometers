@@ -8,9 +8,8 @@ import androidx.annotation.NonNull;
 
 import android.util.Log;
 
+import com.appia.bioland.protocols.BiolandProtocol;
 import com.appia.bioland.protocols.Protocol;
-import com.appia.bioland.protocols.ProtocolV1;
-import com.appia.bioland.protocols.ProtocolV31;
 import com.appia.bioland.protocols.ProtocolV32;
 import com.appia.bioland.protocols.ProtocolCallbacks;
 
@@ -19,8 +18,6 @@ import java.lang.String;
 import java.util.ArrayList;
 
 import no.nordicsemi.android.ble.BleManager;
-import no.nordicsemi.android.ble.WriteRequest;
-
 
 public class BiolandManager extends BleManager<BiolandCallbacks> implements ProtocolCallbacks {
 	/** Bioland communication service UUID */
@@ -29,12 +26,23 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	private final static UUID BIOLAND_RX_CHARACTERISTIC_UUID = UUID.fromString("00001001-0000-1000-8000-00805f9b34fb");
 	/** TX characteristic UUID */
 	private final static UUID BIOLAND_TX_CHARACTERISTIC_UUID = UUID.fromString("00001002-0000-1000-8000-00805f9b34fb");
+	/** TX characteristic UUID */
+	private final static UUID BIOLAND_REG_READ_CHARACTERISTIC_UUID = UUID.fromString("00001004-0000-1000-8000-00805f9b34fb");
+	/** TX characteristic UUID */
+	private final static UUID BIOLAND_REG_CHARACTERISTIC_UUID = UUID.fromString("00001005-0000-1000-8000-00805f9b34fb");
+
+	/** Bioland unknown service UUID */
+	public final static UUID BIOLAND_SERVICE2_UUID = UUID.fromString("0000FF00-0000-1000-8000-00805f9b34fb");
+	/** Unknown characteristic UUID */
+	private final static UUID BIOLAND_UNKNOWN_CHARACTERISTIC_UUID = UUID.fromString("0000FF01-0000-1000-8000-00805f9b34fb");
 
 	private final static String TAG = "BiolandManager";
 
-	private BluetoothGattCharacteristic mRxCharacteristic, mTxCharacteristic;
-
-
+	private BluetoothGattCharacteristic mRxCharacteristic;
+	private BluetoothGattCharacteristic mTxCharacteristic;
+	private BluetoothGattCharacteristic	mRegReadCharacteristic;
+	private BluetoothGattCharacteristic mRegCharacteristic;
+	private BluetoothGattCharacteristic mUnknownCharacteristic;
 	/**
 	 * Bioland Manager constructor
 	 * @param context
@@ -72,6 +80,12 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		mMeasurements.clear();
 	}
 
+	@Override
+	public void log(final int priority, @NonNull final String message) {
+		// Uncomment to see Bluetooth Logs
+		//Log.println(priority, TAG, message);
+	}
+
 	/**
 	 *
 	 * @return
@@ -99,22 +113,17 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		protected void initialize() {
 			if(isConnected()) {
 
-				// TODO: Sacar
-				requestMtu(100)
-						.with((device, mtu) -> Log.d(TAG, "MTU changed to " + mtu))
-						.done(device -> {})
-						.fail((device, status) -> log(Log.WARN, "MTU change not supported"))
-						.enqueue();
-
+				/* Register callback to get data from the device. */
 				setNotificationCallback(mTxCharacteristic)
 						.with((device, data) -> {
-							Log.v(TAG,  data.toString() + " received");
+							Log.v(TAG,  "NOTIFICATION: " + data.toString() + " received");
 							mProtocol.onDataReceived(data.getValue());
 						});
-
 				enableNotifications(mTxCharacteristic)
-						.done(device -> log(Log.INFO, "Bioland notifications enabled"))
-						.fail((device, status) -> log(Log.WARN, "Bioland TX characteristic not found"))
+						.done(device -> Log.i(TAG, "Bioland TX characteristic  notifications enabled"))
+						.fail((device, status) -> {
+							Log.w(TAG, "Bioland TX characteristic  notifications not enabled");
+						})
 						.enqueue();
 			}
 		}
@@ -122,9 +131,12 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		@Override
 		public boolean isRequiredServiceSupported(@NonNull final BluetoothGatt gatt) {
 			final BluetoothGattService service = gatt.getService(BIOLAND_SERVICE_UUID);
+
 			if (service != null) {
 				mRxCharacteristic = service.getCharacteristic(BIOLAND_RX_CHARACTERISTIC_UUID);
 				mTxCharacteristic = service.getCharacteristic(BIOLAND_TX_CHARACTERISTIC_UUID);
+				mRegReadCharacteristic = service.getCharacteristic(BIOLAND_REG_READ_CHARACTERISTIC_UUID);
+				mRegCharacteristic = service.getCharacteristic(BIOLAND_REG_CHARACTERISTIC_UUID);
 			}
 
 			boolean writeRequest = false;
@@ -140,10 +152,21 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 				// longer then MTU-3 bytes into up to MTU-3 bytes chunks.
 				//if (writeRequest)
 					mRxCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+
 				//else
 			}
 
-			return mRxCharacteristic != null && mTxCharacteristic != null && (writeRequest || writeCommand);
+			final BluetoothGattService service2 = gatt.getService(BIOLAND_SERVICE2_UUID);
+			if(service2!=null){
+				mUnknownCharacteristic = service2.getCharacteristic(BIOLAND_UNKNOWN_CHARACTERISTIC_UUID);
+			}
+
+			return mRxCharacteristic != null &&
+					mTxCharacteristic != null &&
+					mRegCharacteristic != null &&
+					mRegReadCharacteristic != null &&
+					mUnknownCharacteristic != null &&
+					(writeRequest || writeCommand);
 		}
 
 		@Override
@@ -152,6 +175,9 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 			mRxCharacteristic = null;
 			mTxCharacteristic = null;
 		}
+	}
+	public void onCountdownReceived(int aCount){
+		mCallbacks.onCountdownReceived(aCount);
 	}
 
 	public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
@@ -185,14 +211,11 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		}
 
 		if (bytes != null && bytes.length > 0) {
-			final WriteRequest request = writeCharacteristic(mRxCharacteristic, bytes)
+			writeCharacteristic(mRxCharacteristic, bytes)
 					.with((device, data) -> Log.v(TAG,
-							"\"" + data.toString() + "\" sent"));
-			//if (!useLongWrite) {
-			// This will automatically split the long data into MTU-3-byte long packets.
-			request.split();
-			//}
-			request.enqueue();
+							"\"" + data.toString() + "\" sent"))
+					//.split()
+					.enqueue();
 		}
 	}
 

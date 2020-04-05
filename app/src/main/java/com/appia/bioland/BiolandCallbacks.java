@@ -7,6 +7,8 @@ import androidx.annotation.NonNull;
 
 public interface BiolandCallbacks extends BleManagerCallbacks {
 
+    void onCountdownReceived(int aCount);
+
     void onMeasurementsReceived();
 
     void onDeviceInfoReceived();

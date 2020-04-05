@@ -33,7 +33,7 @@ public class BiolandProtocol {
      */
     public void startCommunication(){
         /* If there is no communication in progress. */
-        if(mBusy==false) {
+        if(!mBusy) {
             mBusy=true;
             /* DATA READ PACKET */
             Log.d(TAG, " Data packet sent.");
@@ -57,7 +57,7 @@ public class BiolandProtocol {
     public void requestDeviceInfo(){
 
         /* If there is no communication in progress. */
-        if(mBusy==false) {
+        if(!mBusy) {
             mBusy=true;
             /* INFO READ PACKET */
             Log.d(TAG, " Info packet sent.");
@@ -97,12 +97,12 @@ public class BiolandProtocol {
 //		// Packet is valid, reset retries counter.
 //		mRetries = 0;
 
+        /* Stop timout. */
+        mTimer.cancel();
+
         //if(packet.type() ==Protocol::INFORMATION_PACKET)
         if(bytes[2]==0){
             /* Stop communication. */
-            mTimer.cancel();
-            mTimer.purge();
-            mTimer=null;
             mBusy = false;
 
             BiolandInfo deviceInfo = new BiolandInfo();
@@ -118,10 +118,6 @@ public class BiolandProtocol {
         }
         //else if(packet.type() ==Protocol::MEASUREMENT_PACKET)
         else if(bytes[2]==3) {
-            /* Cancel previous timeout. */
-            if(mTimer != null) {
-                mTimer.cancel();
-            }
 
             BiolandMeasurement measurement = new BiolandMeasurement();
             measurement.mGlucose= (float)(((bytes[10]&0x000000FF)<<8)+ (bytes[9]&0x000000FF));
@@ -143,16 +139,13 @@ public class BiolandProtocol {
         //else if(packet.type() ==Protocol::END_PACKET)
         else if(bytes[2]==5) {
             Log.d(TAG, "END PACKET RECEIVED!!");
-
-            /* Stop communication. */
-            mTimer.cancel();
-            mTimer.purge();
-            mTimer=null;
             mBusy = false;
 
             /* Notify measurements have been received and release the reference to the array. */
-            mCallbacks.onMeasurementsReceived(mMeasurements);
-            mMeasurements = null;
+            if(mMeasurements.size()>0) {
+                mCallbacks.onMeasurementsReceived(mMeasurements);
+                mMeasurements = null;
+            }
         }
         //else if(packet.type() ==Protocol::HANDSHAKE_PACKET)
         else if(bytes[2]==9) {
@@ -163,7 +156,7 @@ public class BiolandProtocol {
 
     /* Private protocol stuff. */
     private ProtocolCallbacks mCallbacks;
-    private ArrayList<BiolandMeasurement> mMeasurements;
+    private ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<>();
     private Timer mTimer;
     private byte[] mMessage;
     private int mRetriesCount;

@@ -177,6 +177,10 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 				onMeasurementsReceived();
 				setOperationInProgress(false);
 			}
+			else if (BiolandService.BROADCAST_COUNTDOWN.equals(action)) {
+				int count = intent.getIntExtra(BiolandService.EXTRA_COUNTDOWN,0);
+				Log.d(TAG,"Countdown " + count);
+			}
 			else if(BiolandService.BROADCAST_INFORMATION.equals(action)) {
 				Log.d(TAG,"Broadcast information received! Binder is: " + mBinder);
 				mBatteryCapacity = intent.getIntExtra(BiolandService.EXTRA_BATTERY_CAPACITY,0);
@@ -195,6 +199,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 
 	private static IntentFilter makeIntentFilter() {
 		final IntentFilter intentFilter = new IntentFilter();
+		intentFilter.addAction(BiolandService.BROADCAST_COUNTDOWN);
 		intentFilter.addAction(BiolandService.BROADCAST_MEASUREMENT);
 		intentFilter.addAction(BiolandService.BROADCAST_INFORMATION);
 		intentFilter.addAction(BiolandService.BROADCAST_COMM_FAILED);
