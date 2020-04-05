@@ -12,13 +12,14 @@ public class BiolandMeasurement {
 
     }
     public BiolandMeasurement(float aGlucose,int aYear,
-            int aMonth, int aDay, int aHour, int aMin) {
+            int aMonth, int aDay, int aHour, int aMin, String aId) {
         mGlucose = aGlucose;
         mYear = aYear;
         mMonth = aMonth;
         mDay = aDay;
         mHour = aHour;
         mMin = aMin;
+        mId = aId;
     }
     /** The glucose concentration */
     public float mGlucose;
@@ -29,6 +30,7 @@ public class BiolandMeasurement {
     public int mDay;
     public int mHour;
     public int mMin;
+    public String mId;
     public GregorianCalendar date;
 
     @NonNull

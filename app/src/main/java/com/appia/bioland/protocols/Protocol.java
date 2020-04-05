@@ -5,6 +5,7 @@ import android.util.Log;
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
@@ -30,6 +31,7 @@ public abstract class Protocol {
     private int RETRY_DELAY = 1000;
     private int DELAY_AFTER_RECEIVED = 200;
     private static int CHECKSUM_OFFSET = 2;
+    private static boolean received_info=false;
 
     private static Timer timer;
     private static Semaphore  mutex = new Semaphore(1);
@@ -63,16 +65,20 @@ public abstract class Protocol {
             return false;
         }
         asyncCom = new Communication();
-//        try {
-//            TimeUnit.MILLISECONDS.sleep(2000);
-//        }catch (java.lang.InterruptedException a){
-//            mutex.release(1);
-//            return false;
-//        }
         Calendar calendar = Calendar.getInstance();
-        AppPacket appReplyPacket = build_get_info_packet(calendar);
-        protocolCallbacks.sendData(appReplyPacket.to_bytes());
-        asyncState = AsyncState.WAITING_INFO_PACKET;
+        AppPacket appReplyPacket;
+//        if (!received_info)
+//        {
+            appReplyPacket = build_get_info_packet(calendar);
+            protocolCallbacks.sendData(appReplyPacket.to_bytes());
+            asyncState = AsyncState.WAITING_INFO_PACKET;
+//        }
+//        else{
+//            appReplyPacket = build_get_meas_packet(calendar);
+//            protocolCallbacks.sendData(appReplyPacket.to_bytes());
+//            asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
+//        }
+
         retries_on_current_packet = 0;
         timer.schedule(new TimerTask() {
             @Override
@@ -114,14 +120,8 @@ public abstract class Protocol {
 //                break;
             case WAITING_INFO_PACKET:
                 try{
-                    //Parse the information packet
                     asyncCom.infoPacket = build_info_packet(packet);
-//                    try {
-//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-//                    }catch (java.lang.InterruptedException a){
-//                        mutex.release(1);
-//                        return;
-//                    }
+                    received_info = true;
                     /* Notify application. */
                     // TODO!!! Fill
                     BiolandInfo info = new BiolandInfo();
@@ -135,15 +135,20 @@ public abstract class Protocol {
                     //Change state to waiting for results or end packet
                     asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
 
-//                    //Create the reply packet and send it
-//                    calendar = Calendar.getInstance();
-//                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
-//                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
                 }catch (IllegalLengthException | IllegalContentException e){
-                    //If an error occurred load it to communication
-                    asyncCom.error = e.toString();
-                    asyncState = AsyncState.DONE;
-                    protocolCallbacks.onProtocolError(asyncCom.error);
+                    try{
+                        ResultPacket resultPacket = build_result_packet(packet);
+                        if(asyncCom.resultPackets == null) {
+                            asyncCom.resultPackets = new ArrayList<>();
+                        }
+                        asyncCom.resultPackets.add(resultPacket);
+                        break;
+                    }catch (IllegalLengthException | IllegalContentException k){
+                        //If an error occurred load it to communication
+                        asyncCom.error = e.toString();
+                        asyncState = AsyncState.DONE;
+                        protocolCallbacks.onProtocolError(asyncCom.error);
+                    }
                 }
                 break;
             case WAITING_RESULT_OR_END_PACKET:
@@ -154,16 +159,7 @@ public abstract class Protocol {
                         asyncCom.resultPackets = new ArrayList<>();
                     }
                     asyncCom.resultPackets.add(resultPacket);
-//                    try {
-//                        TimeUnit.MILLISECONDS.sleep(DELAY_BETWEEN_PACKETS);
-//                    }catch (java.lang.InterruptedException a){
-//                        mutex.release(1);
-//                        return;
-//                    }
-//                    //Create the reply packet and send it
-//                    calendar = Calendar.getInstance();
-//                    AppPacket appReplyPacket = build_get_meas_packet(calendar);
-//                    protocolCallbacks.sendData(appReplyPacket.to_bytes());
+
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If controlled exception occurred
                     try {
@@ -180,7 +176,8 @@ public abstract class Protocol {
                                         p.month & 0xff,
                                         p.day & 0xff,
                                         p.hour & 0xff,
-                                        p.min & 0xff));
+                                        p.min & 0xff,
+                                        Arrays.toString(p.getVariablesInByteArray())));
                             }
                             protocolCallbacks.onMeasurementsReceived(arr);
                         }
@@ -193,13 +190,29 @@ public abstract class Protocol {
                 }
                 break;
 
-            //If entered this function in DONE state an error ocurred, should clear communication
+            // If entered this function in DONE a measurement was sent without being requested,
+            // must be a new measurement!
             case DONE:
             default:
-                asyncCom = new Communication();
-                asyncCom.error = "Received a packet after communication is done";
-                asyncState = AsyncState.DONE;
-                protocolCallbacks.onProtocolError(asyncCom.error);
+                try{
+                    //Try to parse as a result packet
+                    ResultPacket resultPacket = build_result_packet(packet);
+                    ArrayList<BiolandMeasurement> arr = new ArrayList<>();
+                    arr.add(new BiolandMeasurement(resultPacket.getGlucose()/(float)18,
+                            2000 + resultPacket.year & 0xff,
+                            resultPacket.month & 0xff,
+                            resultPacket.day & 0xff,
+                            resultPacket.hour & 0xff,
+                            resultPacket.min & 0xff, Arrays.toString(resultPacket.getVariablesInByteArray())));
+                    protocolCallbacks.onMeasurementsReceived(arr);
+
+                }catch (IllegalLengthException | IllegalContentException e) {
+                    asyncCom = new Communication();
+                    asyncCom.error = "Received a packet that is not a measurement after communication is done";
+                    asyncState = AsyncState.DONE;
+                    protocolCallbacks.onProtocolError(asyncCom.error);
+                }
+
                 break;
         }
 
@@ -230,6 +243,9 @@ public abstract class Protocol {
                     calendar = Calendar.getInstance();
                     AppPacket appInfoPacket = build_get_info_packet(calendar);
                     protocolCallbacks.sendData(appInfoPacket.to_bytes());
+//                    if (retries_on_current_packet>MAX_RETRIES/2){
+//                        asyncState=AsyncState.WAITING_RESULT_OR_END_PACKET;
+//                    }
                     timer.schedule(new TimerTask() {
                         @Override
                         public void run() {
