@@ -41,6 +41,9 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      *  Measurement Broadcast!
      */
+    public static final String BROADCAST_COUNTDOWN = "com.appia.bioland.BROADCAST_COUNTDOWN";
+    public static final String EXTRA_COUNTDOWN = "com.appia.bioland.EXTRA_COUNTDOWN";
+
     public static final String BROADCAST_MEASUREMENT = "com.appia.bioland.BROADCAST_MEASUREMENT";
     public static final String EXTRA_GLUCOSE_LEVEL = "com.appia.bioland.EXTRA_GLUCOSE_LEVEL";
 
@@ -95,6 +98,11 @@ public class BiolandService extends BleProfileService implements BiolandCallback
 
     private final LocalBinder mBinder = new BiolandBinder();
 
+    public void onCountdownReceived(int aCount) {
+        final Intent broadcast = new Intent(BROADCAST_COUNTDOWN);
+        broadcast.putExtra(EXTRA_COUNTDOWN,aCount);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
+    }
     /**
      * Called by BiolandManager when all measurements were received.
      */
@@ -208,10 +216,6 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     @Override
     public void onDeviceReady(@NonNull final BluetoothDevice device) {
         super.onDeviceReady(device);
-
-        // Always read measurements when device connects!
-        mManager.requestMeasurements();
-
     }
 
     @Override
@@ -223,12 +227,10 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     protected void onBluetoothEnabled(){
         super.onBluetoothEnabled();
 
-        Log.d(TAG,"onBluetoothEnabled");
-
-
+        /* Get bluetooth device. */
         BluetoothDevice device =  getBluetoothDevice();
-
         if (device != null && !isConnected()) {
+            /* If it was previously connected, reconnect! */
             Log.d(TAG,"Reconnecting...");
             mManager.connect(getBluetoothDevice()).enqueue();
         }
