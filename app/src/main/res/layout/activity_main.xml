@@ -90,17 +90,20 @@
                         style="@style/Widget.ListTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        tools:visibility="visible"
                         android:text="mg/dL"
                         android:layout_alignParentRight="true"
                         android:layout_marginRight="4dp"/>
+
                 </RelativeLayout>
 
-                <ExpandableListView
+                <ListView
+                    android:id="@+id/list_view"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scrollbarStyle="outsideOverlay"
-                    tools:listitem="@layout/activity_feature_gls_item"/>
-
+                    tools:listitem="@layout/measurement_item"
+                    tools:visibility="visible" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"

@@ -5,7 +5,8 @@ import androidx.annotation.NonNull;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.text.DateFormat;
-import java.util.GregorianCalendar;
+import java.util.Date;
+
 
 public class BiolandMeasurement {
     public BiolandMeasurement(){
@@ -19,6 +20,13 @@ public class BiolandMeasurement {
         mDay = aDay;
         mHour = aHour;
         mMin = aMin;
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.YEAR, aYear);
+        cal.set(Calendar.MONTH, aMonth);
+        cal.set(Calendar.DAY_OF_MONTH, aDay);
+        cal.set(Calendar.HOUR_OF_DAY, aHour);
+        cal.set(Calendar.MINUTE, aMin);
+        mDate = cal.getTime();
     }
     /** The glucose concentration */
     public float mGlucose;
@@ -29,7 +37,7 @@ public class BiolandMeasurement {
     public int mDay;
     public int mHour;
     public int mMin;
-    public GregorianCalendar date;
+    public Date mDate;
 
     @NonNull
     @Override

@@ -7,15 +7,22 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.LayoutInflater;
+
 import android.widget.BaseExpandableListAdapter;
 import android.widget.TextView;
+import android.widget.ListView;
+import android.widget.ArrayAdapter;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.UUID;
+import java.util.Locale;
 import java.util.ArrayList;
+import java.text.DateFormat;
 
 import com.appia.bioland.BiolandMeasurement;
 import com.appia.bioland.R;
@@ -29,9 +36,6 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	@SuppressWarnings("unused")
 	private static final String TAG = "GlucoseActivity";
 
-
-	///private MeasurementsListAdapter measurementList;
-	ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<>();
 	BiolandService.BiolandBinder mBinder;
 	private int mProtocolVersion;
 	private int mBatteryCapacity;
@@ -40,7 +44,8 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private TextView batteryLevelView;
 	private View controlPanelStd;
 	private TextView unitView;
-
+	private ListView mListView;
+	private MeasurementsArrayAdapter mMeasArray;
 
 	@Override
 	protected void onCreateView(final Bundle savedInstanceState) {
@@ -63,6 +68,10 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		unitView = findViewById(R.id.unit);
 		controlPanelStd = findViewById(R.id.gls_control_std);
 		batteryLevelView = findViewById(R.id.battery);
+		mListView = findViewById(R.id.list_view);
+		mMeasArray = new MeasurementsArrayAdapter(this,R.layout.measurement_item);
+		mMeasArray.setNotifyOnChange(true);
+		mListView.setAdapter(mMeasArray);
 
 		findViewById(R.id.action_info).setOnClickListener(
 				v -> {
@@ -139,20 +148,12 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 			// Todo: Deberia chequear si esta bindeado?
 			if(mBinder!=null) {
 				ArrayList<BiolandMeasurement> newMeasurements = mBinder.getMeasurements();
-				if (newMeasurements != null) {
-					mMeasurements.addAll(newMeasurements);
+				if (newMeasurements != null && newMeasurements.size()>0) {
+					mMeasArray.addAll(newMeasurements);
 					for(int i=0; i<newMeasurements.size(); i++){
 						Log.d(TAG,"Measurement: " + newMeasurements.get(i));
 					}
-					//final int unit = mMeasurements.valueAt(0).unit;
-					unitView.setVisibility(View.VISIBLE);
-					unitView.setText(R.string.gls_unit_mgpdl);
-
-				} else {
-					unitView.setVisibility(View.GONE);
 				}
-				// Update list view
-				// measurementList.notifyDataSetChanged();
 			}
 		});
 	}
@@ -214,114 +215,41 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private void setOperationInProgress(final boolean progress) {
 		runOnUiThread(() -> controlPanelStd.setVisibility(!progress ? View.VISIBLE : View.GONE));
 	}
-//
-//	public class MeasurementsListAdapter extends BaseExpandableListAdapter {
-//
-//		private Context context;
-//		private List<String> expandableListTitle;
-//		private HashMap<String, List<String>> expandableListDetail;
-//
-//		public MeasurementsListAdapter(Context context, List<String> expandableListTitle,
-//										   HashMap<String, List<String>> expandableListDetail) {
-//			this.context = context;
-//			this.expandableListTitle = expandableListTitle;
-//			this.expandableListDetail = expandableListDetail;
-//		}
-//
-//		@Override
-//		public Object getChild(int listPosition, int expandedListPosition) {
-//			return this.expandableListDetail.get(this.expandableListTitle.get(listPosition))
-//					.get(expandedListPosition);
-//		}
-//
-//		@Override
-//		public long getChildId(int listPosition, int expandedListPosition) {
-//			return expandedListPosition;
-//		}
-//
-//		@Override
-//		public View getChildView(int listPosition, final int expandedListPosition,
-//								 boolean isLastChild, View convertView, ViewGroup parent) {
-//			final String expandedListText = (String) getChild(listPosition, expandedListPosition);
-//			if (convertView == null) {
-//				LayoutInflater layoutInflater = (LayoutInflater) this.context
-//						.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-//				convertView = layoutInflater.inflate(R.layout.list_item, null);
-//			}
-//			TextView expandedListTextView = (TextView) convertView
-//					.findViewById(R.id.expandedListItem);
-//			expandedListTextView.setText(expandedListText);
-//			return convertView;
-//		}
-//
-//		@Override
-//		public int getChildrenCount(int listPosition) {
-//			return this.expandableListDetail.get(this.expandableListTitle.get(listPosition))
-//					.size();
-//		}
-//
-//		@Override
-//		public Object getGroup(int listPosition) {
-//			return this.expandableListTitle.get(listPosition);
-//		}
-//
-//		@Override
-//		public int getGroupCount() {
-//			return this.expandableListTitle.size();
-//		}
-//
-//		@Override
-//		public long getGroupId(int listPosition) {
-//			return listPosition;
-//		}
-//
-//		@Override
-//		public View getGroupView(int listPosition, boolean isExpanded,
-//								 View convertView, ViewGroup parent) {
-//			String listTitle = (String) getGroup(listPosition);
-//			if (convertView == null) {
-//				LayoutInflater layoutInflater = (LayoutInflater) this.context.
-//						getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-//				convertView = layoutInflater.inflate(R.layout.list_group, null);
-//			}
-//			TextView listTitleTextView = (TextView) convertView
-//					.findViewById(R.id.listTitle);
-//			listTitleTextView.setTypeface(null, Typeface.BOLD);
-//			listTitleTextView.setText(listTitle);
-//			return convertView;
-//		}
-//
-//		@Override
-//		public boolean hasStableIds() {
-//			return false;
-//		}
-//
-//		@Override
-//		public boolean isChildSelectable(int listPosition, int expandedListPosition) {
-//			return true;
-//		}
-//	}
 
-//	@Override
-//	public boolean onMenuItemClick(final MenuItem item) {
-//		switch (item.getItemId()) {
-//		case R.id.action_refresh:
-//			biolandManager.refreshRecords();
-//			break;
-//		case R.id.action_first:
-//			biolandManager.getFirstRecord();
-//			break;
-//		case R.id.action_clear:
-//			biolandManager.clear();
-//			break;
-//		case R.id.action_delete_all:
-//			biolandManager.deleteAllRecords();
-//			break;
-//		}
-//		return true;
-//	}
+	public class MeasurementsArrayAdapter extends ArrayAdapter<BiolandMeasurement> {
+		private static final String TAG = "MeasurementsArrayAdapter";
+		private Context mContext;
+		private LayoutInflater mInflater;
 
+		public MeasurementsArrayAdapter(Context aContext, int aResource) {
+			super(aContext,aResource);
+			mContext = aContext;
+			mInflater = LayoutInflater.from(aContext);
+		}
 
+		@Override
+		public View getView(int aPosition, View aConvertView, ViewGroup aParent) {
 
+			View view = aConvertView;
+			if (view == null) {
+				view = mInflater.inflate(R.layout.measurement_item, aParent, false);
+			}
+			BiolandMeasurement measurement = getItem(aPosition);
+			if (measurement == null)
+				return view; // this may happen during closing the activity
+			// Lookup view for data population
+			TextView time = view.findViewById(R.id.time);
+			TextView value = view.findViewById(R.id.value);
+			// Populate the data into the template view using the data object
+
+			DateFormat format = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT, Locale.getDefault());
+			String dateString = format.format(measurement.mDate);
+			time.setText(dateString);
+			value.setText(String.format(Locale.getDefault(),"%.2f",measurement.mGlucose));
+
+			return view;
+
+		}
+	}
 
 }

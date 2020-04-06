@@ -67,6 +67,8 @@ public class BiolandService extends BleProfileService implements BiolandCallback
 
     /* Bioland manager. */
     private BiolandManager mManager;
+    ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<>();
+    BiolandInfo mInfo;
 
     /* This binder is an interface for the binded activity to operate with the device. */
     public class BiolandBinder extends LocalBinder {
@@ -74,7 +76,13 @@ public class BiolandService extends BleProfileService implements BiolandCallback
          * Returns the measurements stored in the manager.
          */
         public ArrayList<BiolandMeasurement> getMeasurements() {
-            return mManager.getMeasurements();
+            ArrayList<BiolandMeasurement> ret = new ArrayList<>(mMeasurements);
+            mMeasurements.clear();
+            return ret;
+        }
+
+        public BiolandInfo getDeviceInfo() {
+           return mInfo;
         }
 
         /**
@@ -106,12 +114,14 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      * Called by BiolandManager when all measurements were received.
      */
-    public void onMeasurementsReceived() {
+    public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
+
+        mMeasurements.addAll(aMeasurements);
+
         final Intent broadcast = new Intent(BROADCAST_MEASUREMENT);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
 
         if(!bound) {
-            ArrayList<BiolandMeasurement> measurements = mManager.getMeasurements();
             createNotification(R.string.notification_new_measurements_message);
         }
     }
@@ -119,10 +129,12 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      * Called by BiolandManager when device information is received..
      */
-    public void onDeviceInfoReceived() {
+    public void onDeviceInfoReceived(BiolandInfo aInfo) {
+        mInfo = aInfo;
+
         final Intent broadcast = new Intent(BROADCAST_INFORMATION);
-        broadcast.putExtra(EXTRA_BATTERY_CAPACITY,mManager.getBatteryCapacity());
-        broadcast.putExtra(EXTRA_SERIAL_NUMBER,mManager.getSerialNumber());
+        broadcast.putExtra(EXTRA_BATTERY_CAPACITY,aInfo.batteryCapacity);
+        broadcast.putExtra(EXTRA_SERIAL_NUMBER,aInfo.serialNumber);
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
 

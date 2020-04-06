@@ -63,40 +63,11 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	 */
 	public void requestDeviceInfo(){/*mProtocol.requestDeviceInfo();*/}
 
-
-	/**
-	 * Returns all measurements as a array.
-	 *
-	 * @return the records list.
-	 */
-	ArrayList<BiolandMeasurement> getMeasurements() {
-		return mMeasurements;
-	}
-
-	/**
-	 * Clear the measurement list locally.
-	 */
-	public void clearMeasurements() {
-		mMeasurements.clear();
-	}
-
 	@Override
 	public void log(final int priority, @NonNull final String message) {
 		// Uncomment to see Bluetooth Logs
 		//Log.println(priority, TAG, message);
 	}
-
-	/**
-	 *
-	 * @return
-	 */
-	public int getBatteryCapacity() {return mInfo.batteryCapacity;}
-
-	/**
-	 *
-	 * @return
-	 */
-	public byte[] getSerialNumber() {return mInfo.serialNumber;}
 
 	@NonNull
 	@Override
@@ -182,19 +153,13 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 
 	public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
 
-		/* Store received measurements. */
-		mMeasurements = aMeasurements;
-
 		/* Notify new measurements were received. */
-		mCallbacks.onMeasurementsReceived();
+		mCallbacks.onMeasurementsReceived(aMeasurements);
+
 	}
 	public void onDeviceInfoReceived(BiolandInfo aInfo) {
-
-		/* Store received info. */
-		mInfo = aInfo;
-
 		/* Notify info was received. */
-		mCallbacks.onDeviceInfoReceived();
+		mCallbacks.onDeviceInfoReceived(aInfo);
 	}
 	public void onProtocolError(String aMessage) {
 		mCallbacks.onProtocolError(aMessage);
@@ -220,6 +185,4 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	}
 
 	private Protocol mProtocol = new ProtocolV32(this);
-	private ArrayList<BiolandMeasurement> mMeasurements;
-	private BiolandInfo mInfo;
 }
