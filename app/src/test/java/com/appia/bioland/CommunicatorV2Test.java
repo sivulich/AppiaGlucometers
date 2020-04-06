@@ -32,6 +32,9 @@ public class CommunicatorV2Test {
             assertEquals(aMeasurements.size(),8);
         }
 
+        public void onCountdownReceived(int value){
+
+        }
 
         public void onDeviceInfoReceived(BiolandInfo aInfo){
             //Assert if correct status is recieved

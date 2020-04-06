@@ -28,10 +28,12 @@ public abstract class Protocol {
     protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
     private AsyncState asyncState;
     private int retries_on_current_packet;
-    private int MAX_RETRIES = 20;
-    private int RETRY_DELAY = 100;
-    private int DELAY_AFTER_RECEIVED = 100;
+    public int MAX_RETRIES = 20;
+    public int RETRY_DELAY = 200;
+    public int DELAY_AFTER_RECEIVED = 200;
+    public boolean testing_mode = false;
     private static int CHECKSUM_OFFSET = 2;
+
 
     private static Timer timer;
     private static Semaphore  mutex = new Semaphore(1);
@@ -215,12 +217,15 @@ public abstract class Protocol {
         }
         // All states except DONE require to send a packet after a delay
         if (asyncState != AsyncState.DONE){
-            timer.schedule(new TimerTask() {
+            if(!testing_mode)
+                timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     sendPacket();
                 }
             }, DELAY_AFTER_RECEIVED);
+            else
+                sendPacket();
         }
         retries_on_current_packet=0;
         mutex.release(1);
@@ -230,7 +235,8 @@ public abstract class Protocol {
     public void sendPacket(){
         // Acquire the mutex not to step on receive
         try {
-            mutex.acquire();
+            if(!testing_mode)
+                mutex.acquire();
         }catch (java.lang.InterruptedException a){
             return;
         }
@@ -247,12 +253,13 @@ public abstract class Protocol {
                     AppPacket appInfoPacket = build_get_info_packet(calendar);
                     protocolCallbacks.sendData(appInfoPacket.to_bytes());
                     // Schedule next packet in RETRY_DELAY milliseconds
-                    timer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            sendPacket();
-                        }
-                    }, RETRY_DELAY);
+                    if(!testing_mode)
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                sendPacket();
+                            }
+                        }, RETRY_DELAY);
                     break;
                 // Request measurement packet
                 case WAITING_RESULT_OR_END_PACKET:
@@ -261,12 +268,13 @@ public abstract class Protocol {
                     AppPacket appDataPacket = build_get_meas_packet(calendar);
                     protocolCallbacks.sendData(appDataPacket.to_bytes());
                     // Schedule next packet in RETRY_DELAY milliseconds
-                    timer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            sendPacket();
-                        }
-                    }, RETRY_DELAY);
+                    if(!testing_mode)
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                sendPacket();
+                            }
+                        }, RETRY_DELAY);
                     break;
                 case DONE:
                     break;
@@ -279,7 +287,8 @@ public abstract class Protocol {
             asyncCom.error = "Max retries reached on current state";
             protocolCallbacks.onProtocolError(asyncCom.error);
         }
-        mutex.release(1);
+        if(!testing_mode)
+            mutex.release(1);
     }
 
     // Define all class of packets in protocols, abstracting the version of the protocol

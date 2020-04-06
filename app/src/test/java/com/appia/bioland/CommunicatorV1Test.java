@@ -20,6 +20,11 @@ public class CommunicatorV1Test {
             assertEquals(data[2], (byte)0x05);
 
         }
+
+        public void onCountdownReceived(int value){
+
+        }
+
         public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements){
             assertEquals(aMeasurements.size(),3);
         }

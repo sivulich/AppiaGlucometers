@@ -146,8 +146,8 @@ public class ProtocolV32 extends Protocol {
 
         public TimingPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
             super(raw);
-            if(raw.length!=4)
-                throw new IllegalLengthException("Packet length must be 18");
+            if(raw.length!=6)
+                throw new IllegalLengthException("Packet length must be 6");
 
             if (startCode != 0x55)
                 throw new IllegalContentException("StartCode must be 0x55");

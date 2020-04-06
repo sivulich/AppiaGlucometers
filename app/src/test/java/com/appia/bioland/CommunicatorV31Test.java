@@ -43,6 +43,9 @@ public class CommunicatorV31Test {
             assertEquals(true,false);
         }
 
+        public void onCountdownReceived(int value){
+
+        }
         public byte[] recieve(){
             if (status ==1){
                 byte[] packet = {(byte)0x55, (byte)0x0f, (byte)0x00, (byte)0x2a, (byte)0x03, (byte)0x02, (byte)0x27, (byte)0x00, (byte)0x11, (byte)0x80, (byte)0x06, (byte)0x00, (byte)0x33, (byte)0x0a, (byte)0x90};
