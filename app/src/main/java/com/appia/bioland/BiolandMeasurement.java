@@ -13,7 +13,7 @@ public class BiolandMeasurement {
 
     }
     public BiolandMeasurement(float aGlucose,int aYear,
-            int aMonth, int aDay, int aHour, int aMin) {
+            int aMonth, int aDay, int aHour, int aMin, String aId) {
         mGlucose = aGlucose;
         mYear = aYear;
         mMonth = aMonth;
@@ -27,6 +27,7 @@ public class BiolandMeasurement {
         cal.set(Calendar.HOUR_OF_DAY, aHour);
         cal.set(Calendar.MINUTE, aMin);
         mDate = cal.getTime();
+        mId = aId;
     }
     /** The glucose concentration */
     public float mGlucose;
@@ -38,6 +39,8 @@ public class BiolandMeasurement {
     public int mHour;
     public int mMin;
     public Date mDate;
+    public String mId;
+
 
     @NonNull
     @Override

@@ -119,7 +119,7 @@ public class BiolandProtocol {
         //else if(packet.type() ==Protocol::MEASUREMENT_PACKET)
         else if(bytes[2]==3) {
             float glucose= (float)(((bytes[10]&0x000000FF)<<8)+ (bytes[9]&0x000000FF));
-            BiolandMeasurement measurement = new BiolandMeasurement(glucose,bytes[3],bytes[4],bytes[5],bytes[6],bytes[7]);
+            BiolandMeasurement measurement = new BiolandMeasurement(glucose,bytes[3],bytes[4],bytes[5],bytes[6],bytes[7],"NADA");
 
             /* Schedule a new timeout. */
             mTimer = new Timer();
