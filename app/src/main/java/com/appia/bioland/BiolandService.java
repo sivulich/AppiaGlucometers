@@ -211,7 +211,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
 
         Log.d(TAG,"Link loss ocurred");
         if(!bound) {
-            updateNotification(R.string.notification_disconnected_message);
+            updateNotification(R.string.notification_waiting);
         }
     }
 
@@ -261,7 +261,16 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     private void startForegroundService() {
         // when the activity closes we need to show the notification that user is connected to the peripheral sensor
         // We start the service as a foreground service as Android 8.0 (Oreo) onwards kills any running background services
-        final Notification notification = createNotification(R.string.notification_connected_message);
+
+        final Notification notification;
+
+        if(isConnected()) {
+            notification = createNotification(R.string.notification_connected_message);
+        }
+        else {
+            notification = createNotification(R.string.notification_waiting);
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForeground(NOTIFICATION_ID, notification);
         } else {
