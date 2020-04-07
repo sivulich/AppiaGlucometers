@@ -144,27 +144,27 @@ public class CommunicatorV32Test {
         }
         public void onDeviceInfoReceived(BiolandInfo aInfo){
             //Assert if correct status is recieved
-            assertEquals(status,7);
+            assertEquals(status,1);
         }
         public void onProtocolError(String aMessage){
             assertEquals(true,false);
         }
         public void onCountdownReceived(int value){
-            assertEquals(4-status+1, value);
+            assertEquals(5-status+1, value);
         }
         public byte[] recieve(){
-            if (status <= 4){
-                byte[] packet = {(byte)0x55, (byte)0x06, (byte)0x02 , (byte)0x00, (byte)(4-status), (byte)((0x55+0x06+0x02+4-status+2)&0xff)};
-                status +=1;
-                return packet;
-            }
-            else if (status == 5){
-                byte[] packet = {(byte)0x55, (byte)0x0c, (byte)0x03, (byte)0x0e, (byte)0x01, (byte)0x01, (byte)0x05, (byte)0x19, (byte)0x00, (byte)0x12, (byte)0x00, (byte)0xa6};
-                status +=1;
-                return packet;
-            }
-            else if (status ==6){
+            if (status==0){
                 byte[] packet = {(byte)0x55, (byte)0x12, (byte)0x00, (byte)0x20, (byte)0x03, (byte)0x32, (byte)0x02, (byte)0x00, (byte)0x11, (byte)0x22, (byte)0x33, (byte)0x44, (byte)0x55, (byte)0x66, (byte)0x77, (byte)0x88, (byte)0x99,(byte)0xbd};
+                status +=1;
+                return packet;
+            }
+            else if (1<=status && status <= 5){
+                byte[] packet = {(byte)0x55, (byte)0x06, (byte)0x02 , (byte)0x00, (byte)(5-status), (byte)((0x55+0x06+0x02+4-status+2)&0xff)};
+                status +=1;
+                return packet;
+            }
+            else if (status == 6){
+                byte[] packet = {(byte)0x55, (byte)0x0c, (byte)0x03, (byte)0x0e, (byte)0x01, (byte)0x01, (byte)0x05, (byte)0x19, (byte)0x00, (byte)0x12, (byte)0x00, (byte)0xa6};
                 status +=1;
                 return packet;
             }
@@ -202,56 +202,36 @@ public class CommunicatorV32Test {
         Protocol protocol = new ProtocolV32(ser);
         protocol.testing_mode = true;
         //Sent firts packet
-//        boolean start = protocol.startCommunication();
         byte[] packet;
-        ProtocolV32.Communication comm;
+
+        // Connect
+        protocol.connect();
+
+        // Receive info packet
+        packet = ser.recieve();
+        protocol.onDataReceived(packet);
+
+        // Receive timing packets
         for(int i=0;i<=4;i++){
             packet = ser.recieve();
             protocol.onDataReceived(packet);
-            comm = protocol.getCommunication();
-            assertEquals(protocol.doneCommunication(), true);
-            assertEquals(comm, null);
         }
+
+        // Receive result packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), false);
-        assertEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertEquals(comm.resultPackets.size(), 1);
-        assertEquals(comm.endPacket, null);
-
-        //Receive INFO packet
-        packet = ser.recieve();
-        protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
 
 
-        //Receive 8 Data packets
+        //Receive 8 more result packets
         for(int i=0;i<8 ;i++)
         {
             packet = ser.recieve();
             protocol.onDataReceived(packet);
-            comm = protocol.getCommunication();
-            assertEquals(protocol.doneCommunication(), false);
-            assertNotEquals(comm.infoPacket, null);
-            assertNotEquals(comm.resultPackets, null);
-            assertEquals(comm.resultPackets.size(), i+2);
-            assertEquals(comm.endPacket, null);
         }
 
         //Receive END packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), true);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertNotEquals(comm.endPacket, null);
     }
 
 }
