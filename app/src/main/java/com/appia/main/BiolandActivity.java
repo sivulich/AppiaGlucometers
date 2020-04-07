@@ -24,12 +24,15 @@ import java.util.Locale;
 import java.util.ArrayList;
 import java.text.DateFormat;
 
+import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import com.appia.bioland.R;
 import com.appia.bioland.Ble.BleProfileService;
 import com.appia.bioland.Ble.BleProfileServiceReadyActivity;
 import com.appia.bioland.BiolandManager;
 import com.appia.bioland.BiolandService;
+
+import org.w3c.dom.Text;
 
 // TODO The GlucoseActivity should be rewritten to use the service approach, like other do.
 public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandService.BiolandBinder> {
@@ -42,6 +45,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private byte[] mSerialNumber;
 
 	private TextView batteryLevelView;
+	private TextView countdownView;
 	private View controlPanelStd;
 	private TextView unitView;
 	private ListView mListView;
@@ -68,6 +72,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		unitView = findViewById(R.id.unit);
 		controlPanelStd = findViewById(R.id.gls_control_std);
 		batteryLevelView = findViewById(R.id.battery);
+		countdownView = findViewById(R.id.countdown);
 		mListView = findViewById(R.id.list_view);
 		mMeasArray = new MeasurementsArrayAdapter(this,R.layout.measurement_item);
 		mMeasArray.setNotifyOnChange(true);
@@ -145,8 +150,8 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 
 	public void onMeasurementsReceived() {
 		runOnUiThread(() -> {
-			// Todo: Deberia chequear si esta bindeado?
 			if(mBinder!=null) {
+				countdownView.setVisibility(View.GONE);
 				ArrayList<BiolandMeasurement> newMeasurements = mBinder.getMeasurements();
 				if (newMeasurements != null && newMeasurements.size()>0) {
 					mMeasArray.addAll(newMeasurements);
@@ -161,7 +166,20 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	public void onInformationReceived() {
 		// TODO: Show device information
 		runOnUiThread(() -> {
+					if(mBinder!=null) {
+						BiolandInfo info = mBinder.getDeviceInfo();
+						Log.d(TAG,"Device information receivec: " + info.batteryCapacity + "% battery left");
+						batteryLevelView.setText(info.batteryCapacity+"%");
+					}
+		});
+	}
 
+	public void onCountdownReceived(int count) {
+		runOnUiThread(() -> {
+			if(mBinder!=null) {
+				countdownView.setVisibility(View.VISIBLE);
+				countdownView.setText(String.valueOf(count));
+			}
 		});
 	}
 
@@ -181,6 +199,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 			else if (BiolandService.BROADCAST_COUNTDOWN.equals(action)) {
 				int count = intent.getIntExtra(BiolandService.EXTRA_COUNTDOWN,0);
 				Log.d(TAG,"Countdown " + count);
+				onCountdownReceived(count);
 			}
 			else if(BiolandService.BROADCAST_INFORMATION.equals(action)) {
 				Log.d(TAG,"Broadcast information received! Binder is: " + mBinder);

@@ -67,44 +67,23 @@ public class CommunicatorV1Test {
         ProtocolV1 protocol = new ProtocolV1(ser);
 
         //Sent firts packet
-        boolean start = protocol.startCommunication();
-        ProtocolV1.Communication comm = protocol.getCommunication();
+        boolean start = protocol.requestMeasurements();
         assertEquals(start, true);
-        assertEquals(protocol.doneCommunication(), false);
-        assertEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
 
         //Receive INFO packet
         byte[] packet = ser.recieve();
         protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
 
         //Receive 3 Data packets
         for(int i=0;i<3 ;i++)
         {
             packet = ser.recieve();
             protocol.onDataReceived(packet);
-            comm = protocol.getCommunication();
-            assertEquals(protocol.doneCommunication(), false);
-            assertNotEquals(comm.infoPacket, null);
-            assertNotEquals(comm.resultPackets, null);
-            assertEquals(comm.resultPackets.size(), i+1);
-            assertEquals(comm.endPacket, null);
         }
 
         //Receive END packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), true);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertNotEquals(comm.endPacket, null);
     }
 
 }

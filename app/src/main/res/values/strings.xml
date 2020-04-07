@@ -16,6 +16,7 @@
     <string name="notification_new_measurements_message">New measurements available.</string>
     <string name="notification_connected_message">%s is connected.</string>
     <string name="notification_disconnected_message">%s is disconnected.</string>
+    <string name="notification_waiting">Waiting for %s to connect.</string>
 
     <string name="no_required_permission">Permission denied.</string>
     <string name="no_ble">Device doesn\'t have BLE support!</string>
@@ -42,7 +43,7 @@
     <string name="gls_action_info">Info</string>
     <string name="gls_action_tbd">TBD</string>
     <string name="gls_unit_mgpdl">mg/dl</string>
-
+    <string name="gls_unit_mmoll">mmol/L</string>
     <!--    <string name="gls_action_abort">Abort</string>-->
 <!--    <string name="gls_action_refresh">Refresh</string>-->
 <!--    <string name="gls_action_first">First</string>-->
