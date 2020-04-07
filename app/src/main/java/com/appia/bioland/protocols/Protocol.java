@@ -31,7 +31,7 @@ public abstract class Protocol {
 
     private int retries_on_current_packet;
     final static public int MAX_RETRIES = 5;
-    final static public int RETRY_DELAY_MS = 200;
+    final static public int RETRY_DELAY_MS = 1000;
     final static public int DELAY_AFTER_RECEIVED = 100;
     private static int CHECKSUM_OFFSET = 2;
 
