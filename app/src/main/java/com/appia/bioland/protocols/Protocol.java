@@ -1,7 +1,5 @@
 package com.appia.bioland.protocols;
 
-import android.util.Log;
-
 import com.appia.bioland.BiolandInfo;
 import com.appia.bioland.BiolandMeasurement;
 import java.util.ArrayList;
@@ -12,28 +10,27 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-
+import android.util.Log;
 
 public abstract class Protocol {
+
+    private final static String TAG = "Protocol";
     // Abstracts serial communication
     private ProtocolCallbacks protocolCallbacks;
-    // Allows to hold state for communication protocol agnostic
-    private Communication asyncCom;
+
+    public List<ResultPacket> resultPackets = new ArrayList<>();
 
     // Contains the current protocol version
     protected Version version;
 
     // All protocols have the following states.
-    protected enum AsyncState {WAITING_HANDSHAKE_PACKET, WAITING_INFO_PACKET, WAITING_RESULT_OR_END_PACKET, DONE};
-    private AsyncState asyncState;
+    protected enum State {DISCONNECTED, WAITING_INFO_PACKET, WAITING_MEASUREMENT,WAITING_RESULT_OR_END_PACKET};
+    private State state;
     private int retries_on_current_packet;
-    public int MAX_RETRIES = 20;
-    public int RETRY_DELAY = 200;
-    public int DELAY_AFTER_RECEIVED = 200;
-    public boolean testing_mode = false;
+    final static public int MAX_RETRIES = 5;
+    final static public int RETRY_DELAY_MS = 1000;
+    final static public int DELAY_AFTER_RECEIVED = 200;
     private static int CHECKSUM_OFFSET = 2;
-
 
     private static Timer timer;
     private static Semaphore  mutex = new Semaphore(1);
@@ -41,60 +38,56 @@ public abstract class Protocol {
     // This class abstracts the protocol from the User
     public Protocol(ProtocolCallbacks aCallbacks){
         protocolCallbacks = aCallbacks;
-        asyncState=AsyncState.DONE;
+        state = State.DISCONNECTED;
         timer = new Timer();
     }
 
-    // This class holds a communication with an Bioland G-500 device
-    static public class Communication{
-        public InfoPacket infoPacket;
-        public List<ResultPacket> resultPackets;
-        public DevicePacket endPacket;
-        public String error;
 
-        public boolean valid(){
-            return (infoPacket!=null && resultPackets !=null && endPacket!= null);
+    public void connect(){
+        if(state == State.DISCONNECTED){
+            state = State.WAITING_INFO_PACKET;
+            retries_on_current_packet = 0;
+            timer = new Timer();
+            sendPacket();
         }
     }
 
     // This function starts the communication, must be used if the protocol is <3.1
-    public boolean startCommunication(){
+    public boolean requestMeasurements(){
 
         try {
             mutex.acquire();
         }catch (java.lang.InterruptedException a){
             return false;
         }
-        asyncCom = new Communication();
-        Calendar calendar = Calendar.getInstance();
-        AppPacket appReplyPacket;
-        appReplyPacket = build_get_info_packet(calendar);
-        protocolCallbacks.sendData(appReplyPacket.to_bytes());
-        asyncState = AsyncState.WAITING_INFO_PACKET;
+
+        AppPacket appDataPacket = build_get_info_packet(Calendar.getInstance());
+        protocolCallbacks.sendData(appDataPacket.to_bytes());
+        state = State.WAITING_RESULT_OR_END_PACKET;
         retries_on_current_packet = 0;
+        timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
                 sendPacket();
             }
-        }, RETRY_DELAY);
+        }, RETRY_DELAY_MS);
         mutex.release(1);
         return true;
     }
 
-    // This function tells you if the communication is done
-    public boolean doneCommunication(){
-        return (asyncState == AsyncState.DONE);
+    /**
+     * Cancel any ongoing communication.
+     */
+    public void disconnect() {
+        // Cancel any pending schedules
+        timer.cancel();
+        state = State.DISCONNECTED;
     }
 
-    // This function returns the current communication
-    public Communication getCommunication(){
-        return asyncCom;
-    }
 
     // This function should be called when a bluetooth packet is received
-    public void onDataReceived(byte[] packet){
-        Calendar calendar;
+    public void onDataReceived(byte[] bytes){
         // Aquire mutex not to step on send function
         try {
             mutex.acquire();
@@ -104,97 +97,92 @@ public abstract class Protocol {
         // Cancel any pending schedules
         timer.cancel();
         timer = new Timer();
-        switch (asyncState){
-            // If entered this function in DONE a measurement was sent without being requested,
-            // must be a new measurement!
-            case DONE:
-                try{
-                    try{
-                        // Try to parse as a timing packet
-                        DevicePacket timing_packet = build_timing_packet(packet);
-                        byte[] variables = timing_packet.getVariablesInByteArray();
-                        // Get timing from packet, it's in position 4
-                        protocolCallbacks.onCountdownReceived(variables[4]);
-                    }catch (IllegalLengthException | IllegalContentException e) {
-                        //Try to parse as a result packet
-                        ResultPacket resultPacket = build_result_packet(packet);
-                        // If a measurement is recived a new communication must start
-                        asyncCom = new Communication();
-                        asyncCom.resultPackets =  new ArrayList<>();
-                        asyncCom.resultPackets.add(resultPacket);
-                        // Next i should request info packet
-                        asyncState = AsyncState.WAITING_INFO_PACKET;
-                    }
-                }catch (IllegalLengthException | IllegalContentException e) {
-                    asyncCom = new Communication();
-                    asyncCom.error = "Received a packet that is not a measurement or timer on idle";
-                    asyncState = AsyncState.DONE;
-                    protocolCallbacks.onProtocolError(asyncCom.error);
-                }
+        switch (state){
+            case DISCONNECTED:
 
                 break;
             // If waiting for an Information packet
             case WAITING_INFO_PACKET:
                 try{
-                    // Try to parse  as an information packet
-                    asyncCom.infoPacket = build_info_packet(packet);
-                    // Fill in application information with available infromation
+                    InfoPacket infoPacket = build_info_packet(bytes);
+
                     BiolandInfo info = new BiolandInfo();
-                    if( version.equals(new Version("1.0"))){
-                        ProtocolV1.InfoPacketV1 v1_info_packet = (ProtocolV1.InfoPacketV1) asyncCom.infoPacket;
-                        info.productionDate = new GregorianCalendar();
-                        info.productionDate.set(v1_info_packet.productionYear,v1_info_packet.productionMonth,0);
-                    } else if (version.equals(new Version("2.0"))){
-                        ProtocolV2.InfoPacketV2 v2_info_packet = (ProtocolV2.InfoPacketV2) asyncCom.infoPacket;
-                        info.batteryCapacity = v2_info_packet.batteryCapacity;
-                        info.serialNumber = v2_info_packet.rollingCode;
-                    } else if (version.equals(new Version("3.1"))) {
-                        ProtocolV31.InfoPacketV31 v31_info_packet = (ProtocolV31.InfoPacketV31) asyncCom.infoPacket;
-                        info.batteryCapacity = v31_info_packet.batteryCapacity;
-                        info.serialNumber = v31_info_packet.rollingCode;
-                    } else if (version.equals(new Version("3.1"))){
-                        ProtocolV32.InfoPacketV32 v32_info_packet = (ProtocolV32.InfoPacketV32) asyncCom.infoPacket;
+//                    if( version.equals(new Version("1.0"))){
+//                        ProtocolV1.InfoPacketV1 v1_info_packet = (ProtocolV1.InfoPacketV1) infoPacket;
+//                        info.productionDate = new GregorianCalendar();
+//                        info.productionDate.set(v1_info_packet.productionYear,v1_info_packet.productionMonth,0);
+//                    } else if (version.equals(new Version("2.0"))){
+//                        ProtocolV2.InfoPacketV2 v2_info_packet = (ProtocolV2.InfoPacketV2) infoPacket;
+//                        info.batteryCapacity = v2_info_packet.batteryCapacity;
+//                        info.serialNumber = v2_info_packet.rollingCode;
+//                    } else if (version.equals(new Version("3.1"))) {
+//                        ProtocolV31.InfoPacketV31 v31_info_packet = (ProtocolV31.InfoPacketV31) infoPacket;
+//                        info.batteryCapacity = v31_info_packet.batteryCapacity;
+//                        info.serialNumber = v31_info_packet.rollingCode;
+//                    } else if (version.equals(new Version("3.1"))){
+                        ProtocolV32.InfoPacketV32 v32_info_packet = (ProtocolV32.InfoPacketV32) infoPacket;
                         info.batteryCapacity = v32_info_packet.batteryCapacity;
                         info.serialNumber = v32_info_packet.seriesNumber;
-                    }
-                    // Notify applicantion
+                    //}
+
+                    // Notify application
                     protocolCallbacks.onDeviceInfoReceived(info);
 
-                    //Change state to waiting for results or end packet
-                    asyncState = AsyncState.WAITING_RESULT_OR_END_PACKET;
+                    state = State.WAITING_MEASUREMENT;
 
                 }catch (IllegalLengthException | IllegalContentException e){
+                    try {
+                        //Try to parse as a result packet
+                        ResultPacket resultPacket = build_result_packet(bytes);
+                        resultPackets.add(resultPacket);
+                        state = State.WAITING_RESULT_OR_END_PACKET;
+                        sendPacket(); // Request new measurement
+
+                    }catch (IllegalLengthException | IllegalContentException error) {
+
+                        Log.e(TAG, "Wrong packet received waiting info packet!");
+
+                    }
 
                     //If an error occurred load it to communication
-                    asyncCom.error = e.toString();
-                    asyncState = AsyncState.DONE;
-                    protocolCallbacks.onProtocolError(asyncCom.error);
+//                    state = State.DONE;
+//                    protocolCallbacks.onProtocolError(e.toString());
 
+                }
+                break;
+            case WAITING_MEASUREMENT:
+                try{
+                    // Try to parse as a timing packet
+                    DevicePacket timing_packet = build_timing_packet(bytes);
+                    byte[] variables = timing_packet.getVariablesInByteArray();
+                    // Get timing from packet, it's in position 4
+                    protocolCallbacks.onCountdownReceived(variables[4]);
+                    if(variables[4] == 0){
+                        state = State.WAITING_RESULT_OR_END_PACKET;
+                    }
+                }catch (IllegalLengthException | IllegalContentException e) {
+                    Log.e(TAG,"Wrong packet received waiting timing packet!");
                 }
                 break;
             case WAITING_RESULT_OR_END_PACKET:
                 try{
                     //Try to parse as a result packet
-                    ResultPacket resultPacket = build_result_packet(packet);
-                    // If the result packet array is empty
-                    if(asyncCom.resultPackets == null) {
-                        asyncCom.resultPackets = new ArrayList<>();
-                    }
-                    asyncCom.resultPackets.add(resultPacket);
-
+                    ResultPacket resultPacket = build_result_packet(bytes);
+                    resultPackets.add(resultPacket);
+                    sendPacket(); // Request new measurement
                 }catch (IllegalLengthException | IllegalContentException e){
                     //If controlled exception occurred
                     try {
                         //Try to parse as End Packet
-                        asyncCom.endPacket = build_end_packet(packet);
-
+                        build_end_packet(bytes);
                         // Notify the application of the received measurements
-                        if(asyncCom.resultPackets!= null) {
+                        if(resultPackets.size()>0) {
                             ArrayList<BiolandMeasurement> arr = new ArrayList<>();
-                            for (int i = 0; i < asyncCom.resultPackets.size(); i++) {
-                                ResultPacket p = asyncCom.resultPackets.get(i);
+                            for (int i = 0; i < resultPackets.size(); i++) {
+
+                                ResultPacket p = resultPackets.get(i);
                                 arr.add(new BiolandMeasurement(p.getGlucose()/(float)18,
-                                        2000 + p.year & 0xff,
+                                        (2000 + (p.year & 0xff)),
                                         p.month & 0xff,
                                         p.day & 0xff,
                                         p.hour & 0xff,
@@ -202,93 +190,70 @@ public abstract class Protocol {
                                         Arrays.toString(p.getVariablesInByteArray())));
                             }
                             protocolCallbacks.onMeasurementsReceived(arr);
+                            resultPackets.clear();
                         }
-
                         // Set state as done
-                        asyncState = AsyncState.DONE;
+                        state = State.WAITING_MEASUREMENT;
 
                     } catch (IllegalLengthException | IllegalContentException k){
-                        asyncCom.error = k.toString();
-                        asyncState = AsyncState.DONE;
-                        protocolCallbacks.onProtocolError(asyncCom.error);
+                        Log.e(TAG,"Wrong packet received waiting result or end packet!");
                     }
                 }
                 break;
         }
-        // All states except DONE require to send a packet after a delay
-        if (asyncState != AsyncState.DONE){
-            if(!testing_mode)
-                timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    sendPacket();
-                }
-            }, DELAY_AFTER_RECEIVED);
-            else
-                sendPacket();
-        }
+
         retries_on_current_packet=0;
         mutex.release(1);
     }
 
     // This function sends the packet
     public void sendPacket(){
-        // Acquire the mutex not to step on receive
-        try {
-            if(!testing_mode)
-                mutex.acquire();
-        }catch (java.lang.InterruptedException a){
-            return;
-        }
+
         // If i haven't retried the max number of tries
         if (retries_on_current_packet<MAX_RETRIES){
 
-            retries_on_current_packet+=1;
-            Calendar calendar;
-            switch (asyncState){
+            retries_on_current_packet++;
+
+            switch (state){
                 // Request information packet
                 case WAITING_INFO_PACKET:
+
                     // Build information packet with current date
-                    calendar = Calendar.getInstance();
-                    AppPacket appInfoPacket = build_get_info_packet(calendar);
+                    AppPacket appInfoPacket = build_get_info_packet(Calendar.getInstance());
                     protocolCallbacks.sendData(appInfoPacket.to_bytes());
+
                     // Schedule next packet in RETRY_DELAY milliseconds
-                    if(!testing_mode)
-                        timer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                sendPacket();
-                            }
-                        }, RETRY_DELAY);
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            sendPacket();
+                        }
+                    }, RETRY_DELAY_MS);
                     break;
+
                 // Request measurement packet
                 case WAITING_RESULT_OR_END_PACKET:
                     // Create packet with current date
-                    calendar = Calendar.getInstance();
-                    AppPacket appDataPacket = build_get_meas_packet(calendar);
+                    AppPacket appDataPacket = build_get_meas_packet(Calendar.getInstance());
                     protocolCallbacks.sendData(appDataPacket.to_bytes());
                     // Schedule next packet in RETRY_DELAY milliseconds
-                    if(!testing_mode)
-                        timer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                sendPacket();
-                            }
-                        }, RETRY_DELAY);
+//                    timer.schedule(new TimerTask() {
+//                        @Override
+//                        public void run() {
+//                            sendPacket();
+//                        }
+//                    }, RETRY_DELAY_MS);
                     break;
-                case DONE:
-                    break;
+
+
             }
 
         } else {
             // If the max number of retries was reached, stop and mark communication as error.
             retries_on_current_packet = 0;
-            asyncState = AsyncState.DONE;
-            asyncCom.error = "Max retries reached on current state";
-            protocolCallbacks.onProtocolError(asyncCom.error);
+            state = State.DISCONNECTED;
+            protocolCallbacks.onProtocolError("Max retries reached on current state");
         }
-        if(!testing_mode)
-            mutex.release(1);
     }
 
     // Define all class of packets in protocols, abstracting the version of the protocol

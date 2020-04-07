@@ -55,7 +55,7 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	 * Sends the request to obtain all the records stored in the device.
 	 */
 	public void requestMeasurements(){
-		mProtocol.startCommunication();
+		mProtocol.requestMeasurements();
 	}
 
 	/**
@@ -83,7 +83,6 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		@Override
 		protected void initialize() {
 			if(isConnected()) {
-
 				/* Register callback to get data from the device. */
 				setNotificationCallback(mTxCharacteristic)
 						.with((device, data) -> {
@@ -141,7 +140,14 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 		}
 
 		@Override
+		protected void onDeviceReady() {
+			super.onDeviceReady();
+			mProtocol.connect();
+		}
+
+		@Override
 		protected void onDeviceDisconnected() {
+			mProtocol.disconnect();
 			// Release all references.
 			mRxCharacteristic = null;
 			mTxCharacteristic = null;

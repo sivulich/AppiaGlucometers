@@ -29,7 +29,7 @@ public interface BiolandCallbacks extends BleManagerCallbacks {
     void onDeviceInfoReceived(BiolandInfo aInfo);
 
     /**
-     * Called when an error occurs during the communication. 
+     * Called when an error occurs during the communication.
      * @param aMessage
      */
     void onProtocolError(String aMessage);
