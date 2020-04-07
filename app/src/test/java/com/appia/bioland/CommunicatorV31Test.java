@@ -82,49 +82,5 @@ public class CommunicatorV31Test {
     }
     
 
-    @Test
-    public void protocolAsyncV31IsCorrect() {
-        SerialCommunicatorTester ser = new SerialCommunicatorTester();
-        ProtocolV31 protocol = new ProtocolV31(ser);
 
-        //Sent firts packet
-        boolean start = protocol.startCommunication();
-        ProtocolV31.Communication comm = protocol.getCommunication();
-        assertEquals(start, true);
-        assertEquals(protocol.doneCommunication(), false);
-        assertEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
-
-        //Receive INFO packet
-        byte[] packet = ser.recieve();
-        protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
-
-        //Receive 8 Data packets
-        for(int i=0;i<8 ;i++)
-        {
-            packet = ser.recieve();
-            protocol.onDataReceived(packet);
-            comm = protocol.getCommunication();
-            assertEquals(protocol.doneCommunication(), false);
-            assertNotEquals(comm.infoPacket, null);
-            assertNotEquals(comm.resultPackets, null);
-            assertEquals(comm.resultPackets.size(), i+1);
-            assertEquals(comm.endPacket, null);
-        }
-
-        //Receive END packet
-        packet = ser.recieve();
-        protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), true);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertNotEquals(comm.endPacket, null);
-    }
 }

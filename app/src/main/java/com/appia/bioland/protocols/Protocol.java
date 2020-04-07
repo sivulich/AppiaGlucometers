@@ -25,8 +25,8 @@ public abstract class Protocol {
     protected Version version;
 
     // All protocols have the following states.
-    protected enum State {DISCONNECTED, WAITING_INFO_PACKET, WAITING_MEASUREMENT,WAITING_RESULT_OR_END_PACKET};
-    private State state;
+    public enum State {DISCONNECTED, WAITING_INFO_PACKET, WAITING_MEASUREMENT,WAITING_RESULT_OR_END_PACKET};
+    public State state;
     public boolean testing_mode;
 
     private int retries_on_current_packet;
@@ -239,7 +239,8 @@ public abstract class Protocol {
                         state = State.WAITING_RESULT_OR_END_PACKET;
                     }
                 }catch (IllegalLengthException | IllegalContentException e) {
-                    Log.e(TAG,"Wrong packet received waiting timing packet!");
+                    protocolCallbacks.onProtocolError(e.toString());
+//                    Log.e(TAG,"Wrong packet received waiting timing packet!");
                 }
                 break;
             case WAITING_RESULT_OR_END_PACKET:
@@ -292,7 +293,8 @@ public abstract class Protocol {
                         state = State.WAITING_MEASUREMENT;
 
                     } catch (IllegalLengthException | IllegalContentException k){
-                        Log.e(TAG,"Wrong packet received waiting result or end packet!");
+                        protocolCallbacks.onProtocolError(k.toString());
+//                        Log.e(TAG,"Wrong packet received waiting result or end packet!");
                     }
                 }
                 break;

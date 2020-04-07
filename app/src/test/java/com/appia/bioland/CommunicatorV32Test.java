@@ -76,67 +76,23 @@ public class CommunicatorV32Test {
         }
     }
 
-    @Test
-    public void protocolAsyncActiveV32IsCorrect()  {
-        SerialCommunicatorTesterActive ser = new SerialCommunicatorTesterActive();
-        Protocol protocol = new ProtocolV32(ser);
-        protocol.testing_mode = true;
-        //Sent firts packet
-        boolean start = protocol.startCommunication();
-        ProtocolV32.Communication comm = protocol.getCommunication();
-        assertEquals(start, true);
-        assertEquals(protocol.doneCommunication(), false);
-        assertEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
-
-        //Receive INFO packet
-        byte[] packet = ser.recieve();
-        protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), false);
-        assertNotEquals(comm.infoPacket, null);
-        assertEquals(comm.resultPackets, null);
-        assertEquals(comm.endPacket, null);
-
-
-        //Receive 8 Data packets
-        for(int i=0;i<8 ;i++)
-        {
-            packet = ser.recieve();
-            protocol.onDataReceived(packet);
-            comm = protocol.getCommunication();
-            assertEquals(protocol.doneCommunication(), false);
-            assertNotEquals(comm.infoPacket, null);
-            assertNotEquals(comm.resultPackets, null);
-            assertEquals(comm.resultPackets.size(), i+1);
-            assertEquals(comm.endPacket, null);
-        }
-
-        //Receive END packet
-        packet = ser.recieve();
-        protocol.onDataReceived(packet);
-        comm = protocol.getCommunication();
-        assertEquals(protocol.doneCommunication(), true);
-        assertNotEquals(comm.infoPacket, null);
-        assertNotEquals(comm.resultPackets, null);
-        assertNotEquals(comm.endPacket, null);
-    }
 
     public class SerialCommunicatorTesterPasive implements ProtocolCallbacks{
         int status = 0;
         public void sendData(byte[] data){
             if (status == 0){
+                // Test if sending a info request on connect
                 assertEquals(data[0], (byte)0x5A);
                 assertEquals(data[1], (byte)0x0A);
                 assertEquals(data[2], (byte)0x00);
                 assertEquals(data.length, 10);
-                status+=1;
             }
             else if(status>7){
+                // Test if sending a request measurement
                 assertEquals(data[0], (byte)0x5A);
                 assertEquals(data[1], (byte)0x0A);
                 assertEquals(data[2], (byte)0x03);
+                assertEquals(data.length, 10);
             }
         }
         public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements){
@@ -205,33 +161,43 @@ public class CommunicatorV32Test {
         byte[] packet;
 
         // Connect
+        assertEquals(protocol.state, Protocol.State.DISCONNECTED);
         protocol.connect();
-
+        assertEquals(protocol.state, Protocol.State.WAITING_INFO_PACKET);
         // Receive info packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
+        assertEquals(protocol.state, Protocol.State.WAITING_MEASUREMENT);
 
         // Receive timing packets
         for(int i=0;i<=4;i++){
             packet = ser.recieve();
             protocol.onDataReceived(packet);
+            if (i<3)
+                assertEquals(protocol.state, Protocol.State.WAITING_MEASUREMENT);
         }
+        assertEquals(protocol.state, Protocol.State.WAITING_RESULT_OR_END_PACKET);
 
         // Receive result packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
-
+        assertEquals(protocol.state, Protocol.State.WAITING_RESULT_OR_END_PACKET);
 
         //Receive 8 more result packets
         for(int i=0;i<8 ;i++)
         {
             packet = ser.recieve();
             protocol.onDataReceived(packet);
+            assertEquals(protocol.state, Protocol.State.WAITING_RESULT_OR_END_PACKET);
         }
 
         //Receive END packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
+        assertEquals(protocol.state, Protocol.State.WAITING_MEASUREMENT);
+
+        protocol.disconnect();
+        assertEquals(protocol.state, Protocol.State.DISCONNECTED);
     }
 
 }
