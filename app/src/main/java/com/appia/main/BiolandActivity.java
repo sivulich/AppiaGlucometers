@@ -1,5 +1,6 @@
 package com.appia.main;
 
+import android.animation.Animator;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,11 +11,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
 
+import android.view.animation.LinearInterpolator;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.util.Log;
+import android.animation.ObjectAnimator;
+import android.view.animation.Animation;
 
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -45,8 +50,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private byte[] mSerialNumber;
 
 	private TextView batteryLevelView;
-	private TextView countdownView;
-	private View controlPanelStd;
+	private ProgressBar progressBar;
 	private TextView unitView;
 	private ListView mListView;
 	private MeasurementsArrayAdapter mMeasArray;
@@ -69,33 +73,24 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	}
 
 	private void setGUI() {
+
+		// Measurements units
 		unitView = findViewById(R.id.unit);
-		controlPanelStd = findViewById(R.id.gls_control_std);
+
+		// Device battery level
 		batteryLevelView = findViewById(R.id.battery);
-		countdownView = findViewById(R.id.countdown);
+
+		// Measurement progress bar
+		progressBar = findViewById(R.id.progressBar);
+		progressBar.setVisibility(View.INVISIBLE);
+
+		// Measurements list view
 		mListView = findViewById(R.id.list_view);
+
+		// Measurement array adapter
 		mMeasArray = new MeasurementsArrayAdapter(this,R.layout.measurement_item);
 		mMeasArray.setNotifyOnChange(true);
 		mListView.setAdapter(mMeasArray);
-
-		findViewById(R.id.action_info).setOnClickListener(
-				v -> {
-					if(mBinder!=null) {
-						mBinder.requestDeviceInfo();
-						setOperationInProgress(true);
-					}});
-
-		findViewById(R.id.action_read).setOnClickListener(
-				v -> {
-					if(mBinder!=null) {
-						mBinder.requestMeasurements();
-						setOperationInProgress(true);
-					}});
-		// todo TBD Action
-		//findViewById(R.id.action_tbd).setOnClickListener(v -> );
-
-		// Create measurements list
-		//setListAdapter(adapter = new ExpandableRecordAdapter(this, glucoseManager));
 	}
 
 	@Override
@@ -122,14 +117,13 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	@Override
 	public void onDeviceDisconnected(@NonNull final BluetoothDevice device) {
 		super.onDeviceDisconnected(device);
-		setOperationInProgress(false);
 		runOnUiThread(() -> batteryLevelView.setText(R.string.not_available));
 	}
 
 	@Override
 	public void onDeviceConnected(@NonNull final BluetoothDevice device) {
 		super.onDeviceConnected(device);
-
+		progressBar.setProgress(0);
 	}
 
 
@@ -151,7 +145,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	public void onMeasurementsReceived() {
 		runOnUiThread(() -> {
 			if(mBinder!=null) {
-				countdownView.setVisibility(View.GONE);
+				progressBar.setVisibility(View.INVISIBLE);
 				ArrayList<BiolandMeasurement> newMeasurements = mBinder.getMeasurements();
 				if (newMeasurements != null && newMeasurements.size()>0) {
 					mMeasArray.addAll(newMeasurements);
@@ -177,12 +171,57 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	public void onCountdownReceived(int count) {
 		runOnUiThread(() -> {
 			if(mBinder!=null) {
-				countdownView.setVisibility(View.VISIBLE);
-				countdownView.setText(String.valueOf(count));
+				progressBar.setVisibility(View.VISIBLE);
+				ObjectAnimator animator = ObjectAnimator.ofInt(progressBar, "progress", (5-count)*progressBar.getMax()/5);
+				animator.setDuration(1200);
+				animator.setInterpolator(new LinearInterpolator());
+				if(count==0){
+					animator.addListener(new Animator.AnimatorListener() {
+						@Override
+						public void onAnimationStart(Animator animation) {
+
+						}
+
+						@Override
+						public void onAnimationEnd(Animator animation) {
+							progressBar.setVisibility(View.INVISIBLE);
+						}
+
+						@Override
+						public void onAnimationCancel(Animator animation) {
+
+						}
+
+						@Override
+						public void onAnimationRepeat(Animator animation) {
+
+						}
+					});
+				}
+				animator.start();
 			}
 		});
 	}
-
+//	public class ProgressBarAnimation extends Animation{
+//		private ProgressBar progressBar;
+//		private float from;
+//		private float  to;
+//
+//		public ProgressBarAnimation(ProgressBar progressBar, float from, float to) {
+//			super();
+//			this.progressBar = progressBar;
+//			this.from = from;
+//			this.to = to;
+//		}
+//
+//		@Override
+//		protected void applyTransformation(float interpolatedTime, Transformation t) {
+//			super.applyTransformation(interpolatedTime, t);
+//			float value = from + (to - from) * interpolatedTime;
+//			progressBar.setProgress((int) value);
+//		}
+//
+//	}
 	/**
 	 * Receive broadcast messages from the service
 	 */
@@ -194,7 +233,6 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 			if (BiolandService.BROADCAST_MEASUREMENT.equals(action)) {
 				Log.d(TAG,"Broadcast measurement received! Binder is: " + mBinder);
 				onMeasurementsReceived();
-				setOperationInProgress(false);
 			}
 			else if (BiolandService.BROADCAST_COUNTDOWN.equals(action)) {
 				int count = intent.getIntExtra(BiolandService.EXTRA_COUNTDOWN,0);
@@ -206,13 +244,11 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 				mBatteryCapacity = intent.getIntExtra(BiolandService.EXTRA_BATTERY_CAPACITY,0);
 				mSerialNumber = intent.getByteArrayExtra(BiolandService.EXTRA_SERIAL_NUMBER);
 				onInformationReceived();
-				setOperationInProgress(false);
 			}
 			else if(BiolandService.BROADCAST_COMM_FAILED.equals(action)) {
 				Log.d(TAG,"Broadcast communication failed received! Binder is: " + mBinder);
 				String msg = intent.getStringExtra(BiolandService.EXTRA_ERROR_MESSAGE);
 				showToast("Error: " + msg);
-				setOperationInProgress(false);
 			}
 		}
 	};
@@ -231,9 +267,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 		return BiolandService.class;
 	}
 
-	private void setOperationInProgress(final boolean progress) {
-		runOnUiThread(() -> controlPanelStd.setVisibility(!progress ? View.VISIBLE : View.GONE));
-	}
+
 
 	public class MeasurementsArrayAdapter extends ArrayAdapter<BiolandMeasurement> {
 		private static final String TAG = "MeasurementsArrayAdapter";

@@ -10,6 +10,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
+
 // TODO
 import android.media.AudioAttributes;
 import android.provider.Settings;
@@ -122,7 +125,8 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
 
         if(!bound) {
-            createNotification(R.string.notification_new_measurements_message);
+            wakeUpScreen();
+            updateNotification(R.string.notification_new_measurements_message,true,true);
         }
     }
 
@@ -210,7 +214,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
        super.onLinkLossOccurred(device);
 
         Log.d(TAG,"Link loss ocurred");
-        if(!bound) {
+        if(!bound && mMeasurements.size()==0) {
             updateNotification(R.string.notification_waiting);
         }
     }
@@ -265,10 +269,10 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         final Notification notification;
 
         if(isConnected()) {
-            notification = createNotification(R.string.notification_connected_message);
+            notification = createNotification(R.string.notification_connected_message,false,false);
         }
         else {
-            notification = createNotification(R.string.notification_waiting);
+            notification = createNotification(R.string.notification_waiting,false,false);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -297,7 +301,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
                     "Bioland Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_HIGH
             );
             serviceChannel.setDescription(getString(R.string.channel_connected_devices_description));
             serviceChannel.setShowBadge(false);
@@ -307,13 +311,30 @@ public class BiolandService extends BleProfileService implements BiolandCallback
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION).build());
 
             NotificationManager mManager = getSystemService(NotificationManager.class);
+            assert mManager != null;
             mManager.createNotificationChannel(serviceChannel);
         }
     }
 
+    private void wakeUpScreen() {
+        PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
+
+        if (pm != null && !pm.isInteractive()) {
+            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"BiolandAPP:"+TAG);
+            wl.acquire(10000);
+            PowerManager.WakeLock wl_cpu = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"BiolandAPP:"+TAG);
+            wl_cpu.acquire(10000);
+        }
+    }
+
+    protected void updateNotification(final int messageResId,boolean aVibrate, boolean aSound) {
+        Notification notification = createNotification(messageResId,aVibrate,aSound);
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(NOTIFICATION_ID, notification);
+    }
 
     protected void updateNotification(final int messageResId) {
-        Notification notification = createNotification(messageResId);
+        Notification notification = createNotification(messageResId,false,false);
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         mNotificationManager.notify(NOTIFICATION_ID, notification);
     }
@@ -326,21 +347,30 @@ public class BiolandService extends BleProfileService implements BiolandCallback
 
      */
     @SuppressWarnings("SameParameterValue")
-    protected Notification createNotification(final int messageResId) {
+    protected Notification createNotification(final int messageResId, boolean aVibrate, boolean aSound) {
 
         final Intent intent = new Intent(this, BiolandActivity.class)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
         // both activities above have launchMode="singleTask" in the AndroidManifest.xml file, so if the task is already running, it will be resumed
         final PendingIntent pendingIntent = PendingIntent.getActivity(this, OPEN_ACTIVITY_REQ, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentIntent(pendingIntent)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(getString(messageResId, getDeviceName()))
-                .setSmallIcon(R.drawable.ic_stat_notify_cgms)
-                .setShowWhen(true)
-                .setAutoCancel(true)
-                .setOngoing(true);
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+        builder.setContentIntent(pendingIntent);
+        builder.setContentTitle(getString(R.string.app_name));
+        builder.setContentText(getString(messageResId, getDeviceName()));
+        builder.setSmallIcon(R.drawable.ic_appia_notification);
+        builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        builder.setShowWhen(true);
+        builder.setAutoCancel(true);
+        builder.setOngoing(true);
+        int defaults = 0;
+        if(aVibrate){
+            defaults |= Notification.DEFAULT_VIBRATE;
+        }
+        if(aSound){
+           defaults |= Notification.DEFAULT_SOUND;
+        }
+        builder.setDefaults(defaults);
 
         if(isConnected()){
             final Intent disconnect = new Intent(ACTION_DISCONNECT);
