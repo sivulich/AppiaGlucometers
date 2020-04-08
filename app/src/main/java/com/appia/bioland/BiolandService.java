@@ -352,7 +352,6 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         final Intent intent = new Intent(this, BiolandActivity.class)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-        // both activities above have launchMode="singleTask" in the AndroidManifest.xml file, so if the task is already running, it will be resumed
         final PendingIntent pendingIntent = PendingIntent.getActivity(this, OPEN_ACTIVITY_REQ, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
         builder.setContentIntent(pendingIntent);
@@ -367,6 +366,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         if(aVibrate){
             defaults |= Notification.DEFAULT_VIBRATE;
         }
+        else
         if(aSound){
            defaults |= Notification.DEFAULT_SOUND;
         }
@@ -377,6 +377,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
             final PendingIntent disconnectAction = PendingIntent.getBroadcast(this, DISCONNECT_REQ, disconnect, PendingIntent.FLAG_UPDATE_CURRENT);
             builder.addAction(new NotificationCompat.Action(R.drawable.ic_action_bluetooth, getString(R.string.notification_action_disconnect), disconnectAction));
         }
+
 
         return builder.build();
     }

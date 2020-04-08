@@ -46,7 +46,7 @@
             android:id="@+id/device_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="40dp"
+            android:layout_marginStart="10dp"
             android:layout_marginTop="@dimen/feature_device_name_margin_top"
             android:layout_toEndOf="@+id/battery"
             android:ellipsize="end"
@@ -55,6 +55,18 @@
             android:text="@string/gls_default_name"
             android:textAllCaps="true"
             android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/device_name"
+            android:layout_alignBottom="@id/device_name"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_toEndOf="@id/device_name"
+            android:background="@android:drawable/button_onoff_indicator_off" />
 
         <LinearLayout
             android:layout_width="match_parent"

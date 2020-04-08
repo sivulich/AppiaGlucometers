@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.LayoutInflater;
+import android.R.drawable;
 
 import android.view.animation.LinearInterpolator;
 import android.widget.BaseExpandableListAdapter;
@@ -22,6 +23,7 @@ import android.animation.ObjectAnimator;
 import android.view.animation.Animation;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.UUID;
@@ -50,6 +52,7 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	private byte[] mSerialNumber;
 
 	private TextView batteryLevelView;
+	private TextView statusView;
 	private ProgressBar progressBar;
 	private TextView unitView;
 	private ListView mListView;
@@ -79,6 +82,9 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 
 		// Device battery level
 		batteryLevelView = findViewById(R.id.battery);
+
+		// Device battery level
+		statusView = findViewById(R.id.status);
 
 		// Measurement progress bar
 		progressBar = findViewById(R.id.progressBar);
@@ -118,12 +124,25 @@ public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandServi
 	public void onDeviceDisconnected(@NonNull final BluetoothDevice device) {
 		super.onDeviceDisconnected(device);
 		runOnUiThread(() -> batteryLevelView.setText(R.string.not_available));
+		statusView.setBackground(ContextCompat.getDrawable(this,drawable.button_onoff_indicator_off));
 	}
 
 	@Override
-	public void onDeviceConnected(@NonNull final BluetoothDevice device) {
+	public void onLinkLossOccurred(@NonNull final BluetoothDevice device) {
+		runOnUiThread(() -> batteryLevelView.setText(""));
+		statusView.setBackground(ContextCompat.getDrawable(this,drawable.button_onoff_indicator_off));
+	}
+
+	@Override
+	public void onDeviceReady(@NonNull final BluetoothDevice device) {
 		super.onDeviceConnected(device);
 		progressBar.setProgress(0);
+		statusView.setBackground(ContextCompat.getDrawable(this,drawable.button_onoff_indicator_on));
+	}
+	@Override
+	public void onDeviceConnected(@NonNull final BluetoothDevice device) {
+		super.onDeviceConnected(device);
+
 	}
 
 
