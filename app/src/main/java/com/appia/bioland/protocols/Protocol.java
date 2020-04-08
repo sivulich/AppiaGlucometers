@@ -19,7 +19,7 @@ public abstract class Protocol {
     private ProtocolCallbacks protocolCallbacks;
 
 
-    private List<ResultPacket> resultPackets;
+    private List<ResultPacket> resultPackets = new ArrayList<>();
 
     // Contains the current protocol version
     protected Version version;
@@ -51,8 +51,6 @@ public abstract class Protocol {
             state = State.WAITING_INFO_PACKET;
             retries_on_current_packet = 0;
             timer = new Timer();
-            if(resultPackets == null)
-                resultPackets = new ArrayList<>();
             sendPacket();
         }
     }
@@ -94,7 +92,6 @@ public abstract class Protocol {
                 sendPacket();
             }
         }, RETRY_DELAY_MS);
-        resultPackets = new ArrayList<>();
 
         mutex.release(1);
         return true;
@@ -188,9 +185,7 @@ public abstract class Protocol {
 
                             // Try to parse as a result packet
                             ResultPacket resultPacket = build_result_packet(bytes);
-                            // Check if the result is null and add it to the current results
-                            if (resultPackets == null)
-                                resultPackets = new ArrayList<>();
+                            // Add it to the current results
                             resultPackets.add(resultPacket);
 
                             // Next state should be to ask for all saved measurements
@@ -249,8 +244,6 @@ public abstract class Protocol {
                     ResultPacket resultPacket = build_result_packet(bytes);
 
                     // Add the packet to current results
-                    if (resultPackets == null)
-                        resultPackets = new ArrayList<>();
                     resultPackets.add(resultPacket);
 
                     // Request new measurement
