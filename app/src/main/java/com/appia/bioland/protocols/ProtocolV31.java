@@ -125,44 +125,6 @@ public class ProtocolV31 extends Protocol {
 
     }
 
-    static public class TimingPacket{
-        byte startCode;
-        byte packetLength;
-        byte packetCategory;
-        byte retain;
-        byte second;
-        byte checksum;
-
-        public TimingPacket(byte[] raw) throws IllegalContentException, IllegalLengthException {
-            if (raw.length != 6)
-                throw new IllegalLengthException("Packet length must be 6");
-
-            startCode = raw[0];
-            if (startCode != 0x55)
-                throw new IllegalContentException("StartCode must be 0x55");
-
-            packetLength = raw[1];
-            if (packetLength != 0x06)
-                throw new IllegalContentException("PacketLength must be 0x06");
-
-            packetCategory = raw[2];
-            if (packetCategory != 0x02)
-                throw new IllegalContentException("PacketCategory must be 0x02");
-            retain = raw[3];
-            second = raw[4];
-            checksum = raw[5];
-            int big = (int) (startCode &0xff) +
-                    (int) (packetLength&0xff) + (int) (packetCategory&0xff) + (int) (retain&0xff) +
-                    (int) (second&0xff) + 2;
-            //Double check for inconsistency in documentation
-            if( !((big&0xff) == (int)(checksum&0xff) || ((big-2)&0xff) == (int)(checksum&0xff)))
-                throw new IllegalContentException("Checksum Does Not Match");
-
-
-
-        }
-    }
-
     static public class ResultPacketV31 extends ResultPacket {
 
 
@@ -212,10 +174,48 @@ public class ProtocolV31 extends Protocol {
         }
     }
 
+    static public class TimingPacket extends DevicePacket{
+        byte retain;
+        byte second;
+        @Override
+        protected byte[] getVariablesInByteArray(){
+            byte[] parentBytes = super.getVariablesInByteArray();
+            byte[] bytes = new byte[parentBytes.length + 2];
+            for(int i=0;i<parentBytes.length;i++){
+                bytes[i] = parentBytes[i];
+            }
+            bytes[parentBytes.length+0] = retain;
+            bytes[parentBytes.length+1] = second;
+            return bytes;
+        }
+
+        public TimingPacket(byte[] raw) throws IllegalLengthException, IllegalContentException {
+            super(raw);
+            if(raw.length!=6)
+                throw new IllegalLengthException("Packet length must be 6");
+
+            if (startCode != 0x55)
+                throw new IllegalContentException("StartCode must be 0x55");
+
+            if (packetLength != 0x06)
+                throw new IllegalContentException("PacketLength must be 0x06");
+
+            if (packetCategory != 0x02)
+                throw new IllegalContentException("PacketCategory must be 0x02");
+
+            retain = raw[3];
+            second = raw[4];
+        }
+    }
+
     // Override the set of functions that allow the FSM on the general protocol to use protocol V3.1.
     @Override
     protected AppPacket build_get_info_packet(Calendar calendar){
         return new AppInfoPacket(calendar);
+    }
+    @Override
+    protected DevicePacket build_timing_packet(byte[] raw) throws IllegalLengthException, IllegalContentException {
+        return new TimingPacket(raw);
     }
     @Override
     protected AppPacket build_get_meas_packet(Calendar calendar){

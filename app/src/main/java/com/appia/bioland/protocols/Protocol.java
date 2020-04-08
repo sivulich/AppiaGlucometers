@@ -158,8 +158,19 @@ public abstract class Protocol {
                     if(version.compareTo(new Version("3.1")) >= 0)
                         state = State.WAITING_MEASUREMENT;
                     // else request measurements
-                    else
+                    else{
                         state = State.WAITING_RESULT_OR_END_PACKET;
+                        if(!testing_mode)
+                            timer.schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    sendPacket();
+                                }
+                            }, DELAY_AFTER_RECEIVED);
+                        else
+                            sendPacket();
+                    }
+
 
                 }
                 // This code onwards was defined after extensive testing on the BIOLAND G-500

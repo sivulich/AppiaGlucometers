@@ -165,8 +165,6 @@ public class ProtocolV32 extends Protocol {
 
 
     static public class ResultPacketV32 extends ResultPacket {
-
-
         public ResultPacketV32(byte[] raw) throws IllegalLengthException, IllegalContentException {
             super(raw);
             if (raw.length != 12)
