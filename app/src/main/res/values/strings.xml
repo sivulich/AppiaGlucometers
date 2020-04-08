@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Bioland</string>
+    <string name="app_name">Appia Bioland</string>
     <string name="bonding">Bonding with the device&#8230;</string>
     <string name="bonded">The device is now bonded.</string>
     <string name="bonding_failed">Bonding failed.</string>
