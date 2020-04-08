@@ -1,6 +1,8 @@
 package com.appia.bioland;
 
 import org.junit.Test;
+
+import com.appia.bioland.protocols.Protocol;
 import com.appia.bioland.protocols.ProtocolCallbacks;
 import com.appia.bioland.protocols.ProtocolV1;
 
@@ -53,7 +55,7 @@ public class CommunicatorV1Test {
                 return packet;
             }
             else if (status== 4){
-                byte[] packet = {(byte)0x55, (byte)0x06, (byte)0x04, (byte)0x5F, (byte)0x00, (byte)0x00};
+                byte[] packet = {(byte)0x55, (byte)0x06, (byte)0x04, (byte)0x61, (byte)0x00, (byte)0x00};
                 status +=1;
                 return packet;
             }
@@ -69,21 +71,23 @@ public class CommunicatorV1Test {
         //Sent firts packet
         boolean start = protocol.requestMeasurements();
         assertEquals(start, true);
-
+        assertEquals(protocol.state, Protocol.State.WAITING_INFO_PACKET);
         //Receive INFO packet
         byte[] packet = ser.recieve();
         protocol.onDataReceived(packet);
-
+        assertEquals(protocol.state, Protocol.State.WAITING_RESULT_OR_END_PACKET);
         //Receive 3 Data packets
         for(int i=0;i<3 ;i++)
         {
             packet = ser.recieve();
             protocol.onDataReceived(packet);
+            assertEquals(protocol.state, Protocol.State.WAITING_RESULT_OR_END_PACKET);
         }
 
         //Receive END packet
         packet = ser.recieve();
         protocol.onDataReceived(packet);
+        assertEquals(protocol.state, Protocol.State.WAITING_MEASUREMENT);
     }
 
 }
