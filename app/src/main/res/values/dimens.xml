@@ -22,10 +22,10 @@
   -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Default screen margins, per the Android Design guidelines. -->
-    <dimen name="activity_vertical_margin_bottom">32dp</dimen>
+    <dimen name="activity_vertical_margin_bottom">10dp</dimen>
     <dimen name="activity_vertical_margin_bottom_narrow" tools:ignore="UnusedResources">16dp</dimen>
     <dimen name="feature_horizontal_margin">50dp</dimen>
-    <dimen name="feature_vertical_margin_top">50dp</dimen>
+    <dimen name="feature_vertical_margin_top">25dp</dimen>
     <dimen name="feature_device_name_margin_top">8dp</dimen>
 
 </resources>

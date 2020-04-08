@@ -13,7 +13,7 @@
     <string name="channel_connected_devices_description">Shows a notification when a device is connected in background.</string>
 
     <string name="notification_action_disconnect">Disconnect</string>
-    <string name="notification_new_measurements_message">New measurements available.</string>
+    <string name="notification_new_measurements_message">New measurements available!</string>
     <string name="notification_connected_message">%s is connected.</string>
     <string name="notification_disconnected_message">%s is disconnected.</string>
     <string name="notification_waiting">Waiting for %s to connect.</string>
