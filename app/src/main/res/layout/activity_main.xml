@@ -1,18 +1,158 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.appia.main.MainActivity">
+    android:orientation="vertical"
+    tools:context="com.appia.main.BiolandActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <include
+        android:id="@+id/toolbar_actionbar"
+        layout="@layout/toolbar"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <RelativeLayout
+        style="@style/HeaderShadow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center">
+
+        <!-- The size of text below must be fixed, therefore dp are used instead of sp -->
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="@dimen/gls_feature_title_long_margin"
+            android:rotation="270"
+            android:text="@string/gls_feature_title_long"
+            android:textColor="@color/verticalTitleColor"
+            android:textSize="32dp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="@dimen/feature_horizontal_margin"
+            android:layout_marginTop="@dimen/feature_device_name_margin_top"
+            android:background="@drawable/battery"
+            android:freezesText="true"
+            android:gravity="center"
+            android:text="@string/not_available"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/device_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="@dimen/feature_device_name_margin_top"
+            android:layout_toEndOf="@+id/battery"
+            android:ellipsize="end"
+            android:freezesText="true"
+            android:maxLines="1"
+            android:text="@string/gls_default_name"
+            android:textAllCaps="true"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/device_name"
+            android:layout_alignBottom="@id/device_name"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_toEndOf="@id/device_name"
+            android:background="@android:drawable/button_onoff_indicator_off" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/action_connect"
+            android:layout_alignTop="@id/device_name"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- Application section -->
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/feature_horizontal_margin"
+                android:layout_marginTop="@dimen/feature_vertical_margin_top"
+                android:layout_marginRight="@dimen/feature_horizontal_margin"
+                android:layout_weight="0"
+                android:background="@color/lightGray"
+                android:max="1000"
+                android:progress="0"
+                android:progressTint="@color/actionBarColor"
+                android:visibility="visible"
+                tools:layout_marginTop="50dp" />
+
+            <LinearLayout
+                style="@style/Widget.List"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/feature_horizontal_margin"
+                android:layout_marginTop="5dp"
+                android:layout_marginRight="@dimen/feature_horizontal_margin"
+                android:layout_marginBottom="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <RelativeLayout
+                    style="@style/Widget.ListTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/Widget.ListTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/gls_section_data" />
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/unit"
+                        style="@style/Widget.ListTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/gls_unit_mmoll"
+                        tools:visibility="visible" />
+
+                </RelativeLayout>
+
+                <ListView
+                    android:id="@+id/list_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scrollbarStyle="outsideOverlay"
+                    tools:listitem="@layout/measurement_item"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+
+            <!-- Timestamp section -->
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/action_connect"
+            style="@style/Widget.Connect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="@dimen/activity_vertical_margin_bottom"
+            android:onClick="onConnectClicked"
+            android:text="@string/action_connect" />
+
+
+    </RelativeLayout>
+</LinearLayout>

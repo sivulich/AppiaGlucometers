@@ -1,3 +1,54 @@
 <resources>
-    <string name="app_name">Bioland</string>
+    <string name="app_name">Appia Bioland</string>
+    <string name="bonding">Bonding with the device&#8230;</string>
+    <string name="bonded">The device is now bonded.</string>
+    <string name="bonding_failed">Bonding failed.</string>
+    <string name="not_available">n/a</string>
+
+    <string name="action_connect">CONNECT</string>
+    <string name="action_connecting">CONNECTING…</string>
+    <string name="action_disconnect">DISCONNECT</string>
+    <string name="action_disconnecting">DISCONNECTING…</string>
+
+    <string name="channel_connected_devices_description">Shows a notification when a device is connected in background.</string>
+
+    <string name="notification_action_disconnect">Disconnect</string>
+    <string name="notification_new_measurements_message">New measurements available!</string>
+    <string name="notification_connected_message">%s is connected.</string>
+    <string name="notification_disconnected_message">%s is disconnected.</string>
+    <string name="notification_waiting">Waiting for %s to connect.</string>
+
+    <string name="no_required_permission">Permission denied.</string>
+    <string name="no_ble">Device doesn\'t have BLE support!</string>
+    <string name="not_supported">The device does not have required services.</string>
+
+    <string name="scanner_title">Select device:</string>
+    <string name="scanner_empty">No device found</string>
+    <string name="scanner_action_scan">Scan</string>
+    <string name="scanner_action_cancel">Cancel</string>
+    <string name="scanner_subtitle_bonded">BONDED DEVICES:</string>
+    <string name="scanner_subtitle_not_bonded">AVAILABLE DEVICES:</string>
+    <string name="scanner_permission_rationale">Since Android 6.0 Marshmallow system requires granting access to device\'s location in order to scan for Bluetooth LE devices. Bluetooth beacons may be used to determine the phone\'s and user\'s location.</string>
+
+    <string name="gls_feature_title_long">Bioland Glucometer Test App</string>
+    <dimen name="gls_feature_title_long_margin">-190dp</dimen>
+    <string name="gls_default_name">DEFAULT BGM</string>
+    <string name="gls_about_text">GLUCOSE SERVICE profile allows you to connect to your Glucose sensor.
+	You can read the last and historical glucose measurement readings from the device. The current implementation supports also the
+	Glucose Measurement Context characteristic which is not supported by the GLS sample in the NRF5x SDK.</string>
+    <string name="gls_section_data">MEASUREMENTS</string>
+    <string name="gls_no_data">No values to display</string>
+    <string name="gls_section_actions">CONTROL</string>
+    <string name="gls_action_read">Read</string>
+    <string name="gls_action_info">Info</string>
+    <string name="gls_action_tbd">TBD</string>
+    <string name="gls_unit_mgpdl">mg/dl</string>
+    <string name="gls_unit_mmoll">mmol/L</string>
+    <!--    <string name="gls_action_abort">Abort</string>-->
+<!--    <string name="gls_action_refresh">Refresh</string>-->
+<!--    <string name="gls_action_first">First</string>-->
+<!--    <string name="gls_action_clear">Clear</string>-->
+<!--    <string name="gls_action_delete_all">Delete all</string>-->
+
+
 </resources>
