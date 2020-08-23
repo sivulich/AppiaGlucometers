@@ -56,9 +56,103 @@ public class Protocol {
         state = State.DISCONNECTED;
     }
 
+    public boolean getTime(){
+        byte[] cmd = new byte[2];
+        cmd[0] = (byte) 0x20;
+        cmd[1] = (byte) 0x02;
 
-    // This function starts the communication, must be used if the protocol is <3.1
-    public boolean requestMeasurements(){
+        return true;
+    }
+
+    public boolean setTime(int timestamp){
+        byte[] cmd = new byte[6];
+        cmd[0] = (byte) 0x20;
+        cmd[1] = (byte) 0x01;
+        cmd[2] = (byte) (timestamp&0xFF);
+        cmd[3] = (byte) (timestamp&0xFF00);
+        cmd[4] = (byte) (timestamp&0xFF);
+        cmd[5] = (byte) (timestamp&0xFF00);
+
+        return true;
+    }
+
+    public boolean getHighLimit(){
+        byte[] cmd = new byte[3];
+        cmd[0] = (byte) 0x0a;
+        cmd[1] = (byte) 0x02;
+        cmd[2] = (byte) 0x0a;
+
+        return true;
+    }
+
+    public boolean setHighLimit(short high){
+        byte[] cmd = new byte[7];
+        cmd[0] = (byte) 0x0a;
+        cmd[1] = (byte) 0x01;
+        cmd[2] = (byte) 0x0a;
+        cmd[3] = (byte) (high&0xFF);
+        cmd[4] = (byte) (high&0xFF00);
+        cmd[5] = (byte) 0x00;
+        cmd[6] = (byte) 0x00;
+
+        return true;
+    }
+
+    public boolean getLowLimit(){
+        byte[] cmd = new byte[3];
+        cmd[0] = (byte) 0x0a;
+        cmd[1] = (byte) 0x02;
+        cmd[2] = (byte) 0x09;
+
+        return true;
+    }
+
+    public boolean setLowLimit(short low){
+        byte[] cmd = new byte[7];
+        cmd[0] = (byte) 0x0a;
+        cmd[1] = (byte) 0x01;
+        cmd[2] = (byte) 0x09;
+        cmd[3] = (byte) (low&0xFF);
+        cmd[4] = (byte) (low&0xFF00);
+        cmd[5] = (byte) 0x00;
+        cmd[6] = (byte) 0x00;
+
+        return true;
+    }
+
+
+    public boolean getTotalRecordCount(){
+        byte[] cmd = new byte[3];
+        cmd[0] = (byte) 0x0a;
+        cmd[1] = (byte) 0x02;
+        cmd[2] = (byte) 0x06;
+
+        return true;
+    }
+
+    public boolean getCorrectRecordCount(){
+        byte[] cmd = new byte[2];
+        cmd[0] = (byte) 0x27;
+        cmd[1] = (byte) 0x00;
+
+        return true;
+    }
+
+    public boolean getMeasurementsByIndex(short index){
+        byte[] cmd = new byte[5];
+        cmd[0] = (byte) 0x31;
+        cmd[1] = (byte) 0x02;
+        cmd[2] = (byte) (index&0xFF);
+        cmd[3] = (byte) (index&0xFF00);
+        cmd[4] = (byte) 0x00;
+        return true;
+    }
+
+    public boolean getMeasurementsById(short id){
+        byte[] cmd = new byte[3];
+        cmd[0] = (byte) 0xB3;
+        cmd[1] = (byte) (id&0xFF);
+        cmd[2] = (byte) (id&0xFF00);
 
         return true;
     }
