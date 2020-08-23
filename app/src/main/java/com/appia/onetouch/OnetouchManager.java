@@ -1,53 +1,42 @@
-package com.appia.bioland;
+package com.appia.onetouch;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
-import androidx.annotation.NonNull;
-
 import android.util.Log;
 
-import com.appia.bioland.protocols.Protocol;
-import com.appia.bioland.protocols.ProtocolV32;
-import com.appia.bioland.protocols.ProtocolCallbacks;
+import androidx.annotation.NonNull;
 
-import java.util.UUID;
-import java.lang.String;
+import com.appia.onetouch.protocol.Protocol;
+import com.appia.onetouch.protocol.ProtocolCallbacks;
+import com.appia.onetouch.OnetouchCallbacks;
+
+
 import java.util.ArrayList;
-
+import java.util.UUID;
 
 import no.nordicsemi.android.ble.BleManager;
 
-public class BiolandManager extends BleManager<BiolandCallbacks> implements ProtocolCallbacks {
-	/** Bioland communication service UUID */
-	public final static UUID BIOLAND_SERVICE_UUID = UUID.fromString("00001000-0000-1000-8000-00805f9b34fb");
+public class OnetouchManager extends BleManager<OnetouchCallbacks> implements ProtocolCallbacks {
+	/** Onetouch communication service UUID */
+	public final static UUID ONETOUCH_SERVICE_UUID = UUID.fromString("af9df7a1-e595-11e3-96b4-0002a5d5c51b");
 	/** RX characteristic UUID */
-	private final static UUID BIOLAND_RX_CHARACTERISTIC_UUID = UUID.fromString("00001001-0000-1000-8000-00805f9b34fb");
+	private final static UUID ONETOUCH_RX_CHARACTERISTIC_UUID = UUID.fromString("af9df7a2-e595-11e3-96b4-0002a5d5c51b");
 	/** TX characteristic UUID */
-	private final static UUID BIOLAND_TX_CHARACTERISTIC_UUID = UUID.fromString("00001002-0000-1000-8000-00805f9b34fb");
-	/** TX characteristic UUID */
-	private final static UUID BIOLAND_REG_READ_CHARACTERISTIC_UUID = UUID.fromString("00001004-0000-1000-8000-00805f9b34fb");
-	/** TX characteristic UUID */
-	private final static UUID BIOLAND_REG_CHARACTERISTIC_UUID = UUID.fromString("00001005-0000-1000-8000-00805f9b34fb");
+	private final static UUID ONETOUCH_TX_CHARACTERISTIC_UUID = UUID.fromString("af9df7a3-e595-11e3-96b4-0002a5d5c51b");
 
-	/** Bioland unknown service UUID */
-	public final static UUID BIOLAND_SERVICE2_UUID = UUID.fromString("0000FF00-0000-1000-8000-00805f9b34fb");
-	/** Unknown characteristic UUID */
-	private final static UUID BIOLAND_UNKNOWN_CHARACTERISTIC_UUID = UUID.fromString("0000FF01-0000-1000-8000-00805f9b34fb");
-
-	private final static String TAG = "BiolandManager";
+	private final static String TAG = "OnetouchManager";
 
 	private BluetoothGattCharacteristic mRxCharacteristic;
 	private BluetoothGattCharacteristic mTxCharacteristic;
-	private BluetoothGattCharacteristic	mRegReadCharacteristic;
-	private BluetoothGattCharacteristic mRegCharacteristic;
-	private BluetoothGattCharacteristic mUnknownCharacteristic;
+
+	private Protocol mProtocol = new Protocol(this);
 	/**
-	 * Bioland Manager constructor
+	 * Onetouch Manager constructor
 	 * @param context
 	 */
-	BiolandManager(final Context context) {
+	OnetouchManager(final Context context) {
 		super(context);
 	}
 
@@ -55,13 +44,13 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	 * Sends the request to obtain all the records stored in the device.
 	 */
 	public void requestMeasurements(){
-		mProtocol.requestMeasurements();
+		//mProtocol.requestMeasurements(); TODO
 	}
 
 	/**
 	 * Sends the request to obtain the device information.
 	 */
-	public void requestDeviceInfo(){/*mProtocol.requestDeviceInfo();*/}
+	public void requestDeviceInfo(){/*mProtocol.requestDeviceInfo();*/} // TODO
 
 	@Override
 	public void log(final int priority, @NonNull final String message) {
@@ -72,14 +61,14 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 	@NonNull
 	@Override
 	protected BleManagerGattCallback getGattCallback() {
-		return new BiolandManagerGattCallback();
+		return new OnetouchManagerGattCallback();
 	}
 
 	/**
 	 * BluetoothGatt callbacks for connection/disconnection, service discovery,
 	 * receiving indication, etc.
 	 */
-	private class BiolandManagerGattCallback extends BleManagerGattCallback {
+	private class OnetouchManagerGattCallback extends BleManagerGattCallback {
 		@Override
 		protected void initialize() {
 			if(isConnected()) {
@@ -90,9 +79,9 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 							mProtocol.onDataReceived(data.getValue());
 						});
 				enableNotifications(mTxCharacteristic)
-						.done(device -> Log.i(TAG, "Bioland TX characteristic  notifications enabled"))
+						.done(device -> Log.i(TAG, "Onetouch TX characteristic  notifications enabled"))
 						.fail((device, status) -> {
-							Log.w(TAG, "Bioland TX characteristic  notifications not enabled");
+							Log.w(TAG, "Onetouch TX characteristic  notifications not enabled");
 						})
 						.enqueue();
 			}
@@ -100,13 +89,11 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 
 		@Override
 		public boolean isRequiredServiceSupported(@NonNull final BluetoothGatt gatt) {
-			final BluetoothGattService service = gatt.getService(BIOLAND_SERVICE_UUID);
+			final BluetoothGattService service = gatt.getService(ONETOUCH_SERVICE_UUID);
 
 			if (service != null) {
-				mRxCharacteristic = service.getCharacteristic(BIOLAND_RX_CHARACTERISTIC_UUID);
-				mTxCharacteristic = service.getCharacteristic(BIOLAND_TX_CHARACTERISTIC_UUID);
-				mRegReadCharacteristic = service.getCharacteristic(BIOLAND_REG_READ_CHARACTERISTIC_UUID);
-				mRegCharacteristic = service.getCharacteristic(BIOLAND_REG_CHARACTERISTIC_UUID);
+				mRxCharacteristic = service.getCharacteristic(ONETOUCH_RX_CHARACTERISTIC_UUID);
+				mTxCharacteristic = service.getCharacteristic(ONETOUCH_TX_CHARACTERISTIC_UUID);
 			}
 
 			boolean writeRequest = false;
@@ -126,16 +113,8 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 				//else
 			}
 
-			final BluetoothGattService service2 = gatt.getService(BIOLAND_SERVICE2_UUID);
-			if(service2!=null){
-				mUnknownCharacteristic = service2.getCharacteristic(BIOLAND_UNKNOWN_CHARACTERISTIC_UUID);
-			}
-
 			return mRxCharacteristic != null &&
 					mTxCharacteristic != null &&
-					mRegCharacteristic != null &&
-					mRegReadCharacteristic != null &&
-					mUnknownCharacteristic != null &&
 					(writeRequest || writeCommand);
 		}
 
@@ -153,20 +132,17 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 			mTxCharacteristic = null;
 		}
 	}
-	public void onCountdownReceived(int aCount){
-		mCallbacks.onCountdownReceived(aCount);
-	}
 
-	public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
+	public void onMeasurementsReceived(ArrayList<OnetouchMeasurement> aMeasurements) {
 
 		/* Notify new measurements were received. */
 		mCallbacks.onMeasurementsReceived(aMeasurements);
+    }
+//	public void onDeviceInfoReceived(OnetouchInfo aInfo) {
+//		/* Notify info was received. */
+//		mCallbacks.onDeviceInfoReceived(aInfo);
+//	}
 
-	}
-	public void onDeviceInfoReceived(BiolandInfo aInfo) {
-		/* Notify info was received. */
-		mCallbacks.onDeviceInfoReceived(aInfo);
-	}
 	public void onProtocolError(String aMessage) {
 		mCallbacks.onProtocolError(aMessage);
 	}
@@ -189,6 +165,4 @@ public class BiolandManager extends BleManager<BiolandCallbacks> implements Prot
 					.enqueue();
 		}
 	}
-
-	private Protocol mProtocol = new ProtocolV32(this);
 }

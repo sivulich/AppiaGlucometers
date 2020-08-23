@@ -19,7 +19,7 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.appia.bioland.Ble;
+package com.appia.Ble;
 
 
 import android.app.Service;
@@ -50,7 +50,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.appia.bioland.R;
-import com.appia.bioland.Ble.scanner.ScannerFragment;
+import com.appia.Ble.scanner.ScannerFragment;
 
 import java.util.UUID;
 

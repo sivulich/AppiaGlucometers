@@ -11,13 +11,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
 
 // TODO
 import android.media.AudioAttributes;
 import android.provider.Settings;
 
-import android.text.TextUtils;
 import android.util.Log;
 
 
@@ -27,11 +25,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import no.nordicsemi.android.ble.BleManager;
 
-import com.appia.bioland.Ble.BleProfileService;
+import com.appia.Ble.BleProfileService;
 import com.appia.main.BiolandActivity;
 
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.ArrayList;
 
 public class BiolandService extends BleProfileService implements BiolandCallbacks {

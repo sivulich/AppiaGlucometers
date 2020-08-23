@@ -1,44 +1,43 @@
 package com.appia.main;
 
+import android.R.drawable;
 import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.LayoutInflater;
-import android.R.drawable;
-
 import android.view.animation.LinearInterpolator;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.ListView;
-import android.widget.ArrayAdapter;
-import android.util.Log;
-import android.animation.ObjectAnimator;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import java.util.UUID;
-import java.util.Locale;
-import java.util.ArrayList;
-import java.text.DateFormat;
-
-import com.appia.bioland.BiolandInfo;
-import com.appia.bioland.BiolandMeasurement;
-import com.appia.bioland.R;
 import com.appia.Ble.BleProfileService;
 import com.appia.Ble.BleProfileServiceReadyActivity;
-import com.appia.bioland.BiolandManager;
-import com.appia.bioland.BiolandService;
+import com.appia.onetouch.OnetouchInfo;
+import com.appia.onetouch.OnetouchManager;
+import com.appia.onetouch.OnetouchMeasurement;
+//import com.appia.onetouch.OnetouchService;
+//import com.appia.onetouch.R;
+
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.UUID;
 
 // TODO The GlucoseActivity should be rewritten to use the service approach, like other do.
-public class BiolandActivity extends BleProfileServiceReadyActivity<BiolandService.BiolandBinder> {
+public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandService.BiolandBinder> {
 	@SuppressWarnings("unused")
 	private static final String TAG = "GlucoseActivity";
 
