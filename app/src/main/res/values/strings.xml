@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Appia Bioland</string>
+    <string name="app_name">Appia Glucometer Test App</string>
     <string name="bonding">Bonding with the device&#8230;</string>
     <string name="bonded">The device is now bonded.</string>
     <string name="bonding_failed">Bonding failed.</string>
@@ -30,7 +30,7 @@
     <string name="scanner_subtitle_not_bonded">AVAILABLE DEVICES:</string>
     <string name="scanner_permission_rationale">Since Android 6.0 Marshmallow system requires granting access to device\'s location in order to scan for Bluetooth LE devices. Bluetooth beacons may be used to determine the phone\'s and user\'s location.</string>
 
-    <string name="gls_feature_title_long">Bioland Glucometer Test App</string>
+    <string name="gls_feature_title_long">Glucometer Test App</string>
     <dimen name="gls_feature_title_long_margin">-190dp</dimen>
     <string name="gls_default_name">DEFAULT BGM</string>
     <string name="gls_about_text">GLUCOSE SERVICE profile allows you to connect to your Glucose sensor.

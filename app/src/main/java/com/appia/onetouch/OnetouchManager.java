@@ -55,7 +55,7 @@ public class OnetouchManager extends BleManager<OnetouchCallbacks> implements Pr
 	@Override
 	public void log(final int priority, @NonNull final String message) {
 		// Uncomment to see Bluetooth Logs
-		//Log.println(priority, TAG, message);
+		Log.println(priority, TAG, message);
 	}
 
 	@NonNull

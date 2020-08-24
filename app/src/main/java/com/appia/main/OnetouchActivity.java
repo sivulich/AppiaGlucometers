@@ -28,8 +28,8 @@ import com.appia.Ble.BleProfileServiceReadyActivity;
 import com.appia.onetouch.OnetouchInfo;
 import com.appia.onetouch.OnetouchManager;
 import com.appia.onetouch.OnetouchMeasurement;
-//import com.appia.onetouch.OnetouchService;
-//import com.appia.onetouch.R;
+import com.appia.onetouch.OnetouchService;
+import com.appia.bioland.R;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -37,12 +37,11 @@ import java.util.Locale;
 import java.util.UUID;
 
 // TODO The GlucoseActivity should be rewritten to use the service approach, like other do.
-public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandService.BiolandBinder> {
+public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchService.OnetouchBinder> {
 	@SuppressWarnings("unused")
 	private static final String TAG = "GlucoseActivity";
 
-	BiolandService.BiolandBinder mBinder;
-	private int mProtocolVersion;
+	OnetouchService.OnetouchBinder mBinder;
 	private int mBatteryCapacity;
 	private byte[] mSerialNumber;
 
@@ -100,7 +99,7 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 	}
 
 	@Override
-	protected void onServiceBound(final BiolandService.BiolandBinder binder) {
+	protected void onServiceBound(final OnetouchService.OnetouchBinder binder) {
 
 		// Store binder
 		mBinder = binder;
@@ -153,14 +152,14 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 
 	@Override
 	protected UUID getFilterUUID() {
-		return BiolandManager.BIOLAND_SERVICE_UUID;
+		return null;//OnetouchManager.ONETOUCH_SERVICE_UUID;
 	}
 
 	public void onMeasurementsReceived() {
 		runOnUiThread(() -> {
 			if(mBinder!=null) {
 				progressBar.setVisibility(View.INVISIBLE);
-				ArrayList<BiolandMeasurement> newMeasurements = mBinder.getMeasurements();
+				ArrayList<OnetouchMeasurement> newMeasurements = mBinder.getMeasurements();
 				if (newMeasurements != null && newMeasurements.size()>0) {
 					mMeasArray.addAll(newMeasurements);
 					for(int i=0; i<newMeasurements.size(); i++){
@@ -175,7 +174,7 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 		// TODO: Show device information
 		runOnUiThread(() -> {
 					if(mBinder!=null) {
-						BiolandInfo info = mBinder.getDeviceInfo();
+						OnetouchInfo info = mBinder.getDeviceInfo();
 						Log.d(TAG,"Device information receivec: " + info.batteryCapacity + "% battery left");
 						batteryLevelView.setText(info.batteryCapacity+"%");
 					}
@@ -244,24 +243,24 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 		public void onReceive(final Context context, final Intent intent) {
 			final String action = intent.getAction();
 
-			if (BiolandService.BROADCAST_MEASUREMENT.equals(action)) {
+			if (OnetouchService.BROADCAST_MEASUREMENT.equals(action)) {
 				Log.d(TAG,"Broadcast measurement received! Binder is: " + mBinder);
 				onMeasurementsReceived();
 			}
-			else if (BiolandService.BROADCAST_COUNTDOWN.equals(action)) {
-				int count = intent.getIntExtra(BiolandService.EXTRA_COUNTDOWN,0);
+			else if (OnetouchService.BROADCAST_COUNTDOWN.equals(action)) {
+				int count = intent.getIntExtra(OnetouchService.EXTRA_COUNTDOWN,0);
 				Log.d(TAG,"Countdown " + count);
 				onCountdownReceived(count);
 			}
-			else if(BiolandService.BROADCAST_INFORMATION.equals(action)) {
+			else if(OnetouchService.BROADCAST_INFORMATION.equals(action)) {
 				Log.d(TAG,"Broadcast information received! Binder is: " + mBinder);
-				mBatteryCapacity = intent.getIntExtra(BiolandService.EXTRA_BATTERY_CAPACITY,0);
-				mSerialNumber = intent.getByteArrayExtra(BiolandService.EXTRA_SERIAL_NUMBER);
+				mBatteryCapacity = intent.getIntExtra(OnetouchService.EXTRA_BATTERY_CAPACITY,0);
+				mSerialNumber = intent.getByteArrayExtra(OnetouchService.EXTRA_SERIAL_NUMBER);
 				onInformationReceived();
 			}
-			else if(BiolandService.BROADCAST_COMM_FAILED.equals(action)) {
+			else if(OnetouchService.BROADCAST_COMM_FAILED.equals(action)) {
 				Log.d(TAG,"Broadcast communication failed received! Binder is: " + mBinder);
-				String msg = intent.getStringExtra(BiolandService.EXTRA_ERROR_MESSAGE);
+				String msg = intent.getStringExtra(OnetouchService.EXTRA_ERROR_MESSAGE);
 				showToast("Error: " + msg);
 			}
 		}
@@ -269,21 +268,21 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 
 	private static IntentFilter makeIntentFilter() {
 		final IntentFilter intentFilter = new IntentFilter();
-		intentFilter.addAction(BiolandService.BROADCAST_COUNTDOWN);
-		intentFilter.addAction(BiolandService.BROADCAST_MEASUREMENT);
-		intentFilter.addAction(BiolandService.BROADCAST_INFORMATION);
-		intentFilter.addAction(BiolandService.BROADCAST_COMM_FAILED);
+		intentFilter.addAction(OnetouchService.BROADCAST_COUNTDOWN);
+		intentFilter.addAction(OnetouchService.BROADCAST_MEASUREMENT);
+		intentFilter.addAction(OnetouchService.BROADCAST_INFORMATION);
+		intentFilter.addAction(OnetouchService.BROADCAST_COMM_FAILED);
 		return intentFilter;
 	}
 
 	@Override
 	protected Class<? extends BleProfileService> getServiceClass() {
-		return BiolandService.class;
+		return OnetouchService.class;
 	}
 
 
 
-	public class MeasurementsArrayAdapter extends ArrayAdapter<BiolandMeasurement> {
+	public class MeasurementsArrayAdapter extends ArrayAdapter<OnetouchMeasurement> {
 		private static final String TAG = "MeasurementsArrayAdapter";
 		private Context mContext;
 		private LayoutInflater mInflater;
@@ -301,7 +300,7 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<BiolandServ
 			if (view == null) {
 				view = mInflater.inflate(R.layout.measurement_item, aParent, false);
 			}
-			BiolandMeasurement measurement = getItem(aPosition);
+			OnetouchMeasurement measurement = getItem(aPosition);
 			if (measurement == null)
 				return view; // this may happen during closing the activity
 			// Lookup view for data population
