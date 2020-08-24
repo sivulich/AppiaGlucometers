@@ -1,6 +1,8 @@
 package com.appia.onetouch.protocol;
 
 import com.appia.onetouch.protocol.ProtocolCallbacks;
+import com.appia.onetouch.protocol.bleuart.Bleuart;
+import com.appia.onetouch.protocol.bleuart.BleuartCallbacks;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,7 +13,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 
-public class Protocol {
+public class Protocol implements BleuartCallbacks {
 
     private final static String TAG = "OneTouchProtocol";
 
@@ -29,7 +31,7 @@ public class Protocol {
     private static int CHECKSUM_OFFSET = 2;
 
     private static Timer timer;
-    private static Semaphore  mutex = new Semaphore(1);
+    private Bleuart mBleUart = new Bleuart(this);
 
     // This class abstracts the protocol from the User
     public Protocol(ProtocolCallbacks aCallbacks){
@@ -37,6 +39,34 @@ public class Protocol {
         state = State.DISCONNECTED;
         timer = new Timer();
     }
+    /**********************************************************************************************/
+    /*                                      Bleuart Callbacks                                     */
+
+    /**
+     * Called by Bleuart protocol when a packet is received.
+     * @param aBytes
+     */
+    public void onPacketReceived(byte[] aBytes){
+
+    }
+
+    /**
+     * Called by Bleuart protocol to send bytes over ble
+     * @param aBytes
+     */
+    public void sendData(byte[] aBytes){
+        protocolCallbacks.sendData(aBytes);
+    }
+    /**********************************************************************************************/
+    /**
+     * Called by the lower layer when a ble data is received
+     * @param bytes
+     */
+    public void onDataReceived(byte[] bytes){
+        // Forward data to the bleuart protocol.
+        mBleUart.onDataReceived(bytes);
+    }
+    /**********************************************************************************************/
 
     // Function to be called when the device connected
     public void connect(){
@@ -44,7 +74,6 @@ public class Protocol {
             state = State.WAITING_INFO_PACKET;
             retries_on_current_packet = 0;
             timer = new Timer();
-            sendPacket();
         }
     }
 
@@ -61,6 +90,7 @@ public class Protocol {
         cmd[0] = (byte) 0x20;
         cmd[1] = (byte) 0x02;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -73,6 +103,7 @@ public class Protocol {
         cmd[4] = (byte) (timestamp&0xFF);
         cmd[5] = (byte) (timestamp&0xFF00);
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -82,6 +113,7 @@ public class Protocol {
         cmd[1] = (byte) 0x02;
         cmd[2] = (byte) 0x0a;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -95,6 +127,7 @@ public class Protocol {
         cmd[5] = (byte) 0x00;
         cmd[6] = (byte) 0x00;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -104,6 +137,7 @@ public class Protocol {
         cmd[1] = (byte) 0x02;
         cmd[2] = (byte) 0x09;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -117,6 +151,7 @@ public class Protocol {
         cmd[5] = (byte) 0x00;
         cmd[6] = (byte) 0x00;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -127,6 +162,7 @@ public class Protocol {
         cmd[1] = (byte) 0x02;
         cmd[2] = (byte) 0x06;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -135,6 +171,7 @@ public class Protocol {
         cmd[0] = (byte) 0x27;
         cmd[1] = (byte) 0x00;
 
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -145,6 +182,8 @@ public class Protocol {
         cmd[2] = (byte) (index&0xFF);
         cmd[3] = (byte) (index&0xFF00);
         cmd[4] = (byte) 0x00;
+
+        mBleUart.sendPacket(cmd);
         return true;
     }
 
@@ -154,16 +193,7 @@ public class Protocol {
         cmd[1] = (byte) (id&0xFF);
         cmd[2] = (byte) (id&0xFF00);
 
+        mBleUart.sendPacket(cmd);
         return true;
-    }
-
-    // This function should be called when a bluetooth packet is received
-    public void onDataReceived(byte[] bytes){
-
-    }
-
-    // This function sends the packet
-    public void sendPacket(){
-
     }
 }

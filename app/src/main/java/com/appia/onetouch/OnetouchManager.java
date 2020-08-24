@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import com.appia.onetouch.protocol.Protocol;
 import com.appia.onetouch.protocol.ProtocolCallbacks;
 import com.appia.onetouch.OnetouchCallbacks;
+import com.appia.onetouch.protocol.bleuart.Bleuart;
 
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class OnetouchManager extends BleManager<OnetouchCallbacks> implements Pr
 	private BluetoothGattCharacteristic mTxCharacteristic;
 
 	private Protocol mProtocol = new Protocol(this);
+
 	/**
 	 * Onetouch Manager constructor
 	 * @param context
