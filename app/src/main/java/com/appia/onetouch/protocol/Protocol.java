@@ -1,12 +1,17 @@
 package com.appia.onetouch.protocol;
 
+import android.util.Log;
+
 import com.appia.onetouch.protocol.ProtocolCallbacks;
 import com.appia.onetouch.protocol.bleuart.Bleuart;
 import com.appia.onetouch.protocol.bleuart.BleuartCallbacks;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Timer;
@@ -20,25 +25,31 @@ public class Protocol implements BleuartCallbacks {
     // Abstracts serial communication
     private ProtocolCallbacks protocolCallbacks;
 
-    // All protocols have the following states.
-    public enum State {DISCONNECTED, WAITING_INFO_PACKET, WAITING_MEASUREMENT,WAITING_RESULT_OR_END_PACKET};
-    private State state;
+    private final static int PROTOCOL_OVERHEAD = 7;
+    private final static int DEVICE_TIME_OFFSET = 946684799; // Year 2000 UNIX time
 
-    private int retries_on_current_packet;
-    final static public int MAX_RETRIES = 5;
-    final static public int RETRY_DELAY_MS = 1000;
-    final static public int DELAY_AFTER_RECEIVED = 100;
-    private static int CHECKSUM_OFFSET = 2;
-
+    public enum State {IDLE, WAITING_TIME_GET, WAITING_TIME_SET, WAITING_MEASUREMENT};
+    private Bleuart mBleUart;
+    private State mState;
     private static Timer timer;
-    private Bleuart mBleUart = new Bleuart(this);
+
 
     // This class abstracts the protocol from the User
-    public Protocol(ProtocolCallbacks aCallbacks){
+    public Protocol(ProtocolCallbacks aCallbacks, int aMaxPacketSize){
         protocolCallbacks = aCallbacks;
-        state = State.DISCONNECTED;
+        mState = State.IDLE;
         timer = new Timer();
+        mBleUart = new Bleuart(this, aMaxPacketSize);
     }
+
+    void getStoredMeasurements(){
+        getTotalRecordCount();
+    }
+    // packing an array of 4 bytes to an int, little endian, clean code
+    int intFromByteArray(byte[] bytes) {
+        return  ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    }
+
     /**********************************************************************************************/
     /*                                      Bleuart Callbacks                                     */
 
@@ -47,7 +58,35 @@ public class Protocol implements BleuartCallbacks {
      * @param aBytes
      */
     public void onPacketReceived(byte[] aBytes){
+        Log.d(TAG,"Packet received: " + bytesToHex(aBytes));
 
+        if(checkCRC16(aBytes)){
+            switch(mState){
+                case WAITING_TIME_GET:
+                    if(aBytes.length==12){
+                        long timeInSeconds = DEVICE_TIME_OFFSET + intFromByteArray(Arrays.copyOfRange(aBytes,5,5+4));
+                        handleTimeGet(timeInSeconds);
+                    }
+                    else if(aBytes.length==8) {
+                        handleTimeSet();
+                    }
+                    break;
+                case WAITING_MEASUREMENT:
+                    if(aBytes.length==19){
+
+                    }
+                    else if(aBytes.length==24) {
+
+                    }
+                    break;
+            }
+        }
+        else {
+            int computedCRC = computeCRC(aBytes,0,aBytes.length-2);
+            int receivedCRC = extractCRC(aBytes);
+            Log.e(TAG,"CRC error! Expected " + Integer.toHexString(computedCRC) +
+                    " but got " + Integer.toHexString(receivedCRC) + ".");
+        }
     }
 
     /**
@@ -70,10 +109,9 @@ public class Protocol implements BleuartCallbacks {
 
     // Function to be called when the device connected
     public void connect(){
-        if(state == State.DISCONNECTED){
-            state = State.WAITING_INFO_PACKET;
-            retries_on_current_packet = 0;
+        if(mState == State.IDLE){
             timer = new Timer();
+            getTime();
         }
     }
 
@@ -82,28 +120,24 @@ public class Protocol implements BleuartCallbacks {
         // Cancel any pending schedules
         timer.cancel();
         // Set state to disconnected
-        state = State.DISCONNECTED;
+        mState = State.IDLE;
     }
 
     public boolean getTime(){
-        byte[] cmd = new byte[2];
-        cmd[0] = (byte) 0x20;
-        cmd[1] = (byte) 0x02;
-
-        mBleUart.sendPacket(cmd);
+        mBleUart.sendPacket(buildPacket(new byte[]{0x20,0x02}));
+        mState = State.WAITING_TIME_GET;
         return true;
     }
 
-    public boolean setTime(int timestamp){
-        byte[] cmd = new byte[6];
-        cmd[0] = (byte) 0x20;
-        cmd[1] = (byte) 0x01;
-        cmd[2] = (byte) (timestamp&0xFF);
-        cmd[3] = (byte) (timestamp&0xFF00);
-        cmd[4] = (byte) (timestamp&0xFF);
-        cmd[5] = (byte) (timestamp&0xFF00);
-
-        mBleUart.sendPacket(cmd);
+    public boolean setTime(){
+        long currTime = System.currentTimeMillis()/1000-DEVICE_TIME_OFFSET;
+        mBleUart.sendPacket(buildPacket(new byte[]{0x20,
+                0x01,
+                (byte)((currTime&0x000000FF)),
+                (byte)((currTime&0x0000FF00)>>8),
+                (byte)((currTime&0x00FF0000)>>16),
+                (byte)((currTime&0xFF000000)>>24)
+        }));
         return true;
     }
 
@@ -122,8 +156,8 @@ public class Protocol implements BleuartCallbacks {
         cmd[0] = (byte) 0x0a;
         cmd[1] = (byte) 0x01;
         cmd[2] = (byte) 0x0a;
-        cmd[3] = (byte) (high&0xFF);
-        cmd[4] = (byte) (high&0xFF00);
+        cmd[3] = (byte) ((high&0x00FF));
+        cmd[4] = (byte) ((high&0xFF00)>>8);
         cmd[5] = (byte) 0x00;
         cmd[6] = (byte) 0x00;
 
@@ -146,8 +180,8 @@ public class Protocol implements BleuartCallbacks {
         cmd[0] = (byte) 0x0a;
         cmd[1] = (byte) 0x01;
         cmd[2] = (byte) 0x09;
-        cmd[3] = (byte) (low&0xFF);
-        cmd[4] = (byte) (low&0xFF00);
+        cmd[3] = (byte) (low&0x00FF);
+        cmd[4] = (byte) ((low&0xFF00)>>8);
         cmd[5] = (byte) 0x00;
         cmd[6] = (byte) 0x00;
 
@@ -195,5 +229,85 @@ public class Protocol implements BleuartCallbacks {
 
         mBleUart.sendPacket(cmd);
         return true;
+    }
+
+    private void handleTimeGet(long aSeconds){
+        Log.d(TAG, "Glucometer time is: "+ new Date(1000*aSeconds).toString());
+        Log.d(TAG, "System time is: "+ new Date(System.currentTimeMillis()).toString());
+        setTime();
+    }
+
+    private void handleTimeSet(){
+        Log.d(TAG, "Time has been set!");
+    }
+  /*  private int crc16(byte[] bytes){
+            int crc = 0xFFFF;          // initial value
+            int polynomial = 0x1021;   // 0001 0000 0010 0001  (0, 5, 12)
+
+            for (byte b : bytes) {
+                for (int i = 0; i < 8; i++) {
+                    boolean bit = ((b   >> (7-i) & 1) == 1);
+                    boolean c15 = ((crc >> 15    & 1) == 1);
+                    crc <<= 1;
+                    if (c15 ^ bit) crc ^= polynomial;
+                }
+            }
+            crc &= 0xffff;
+            return crc;
+    }*/
+
+
+    private static byte[] buildPacket(byte[] payload){
+        int N = payload.length;
+        int packetLength = PROTOCOL_OVERHEAD + N;
+        byte[] packet = new byte[packetLength];
+        packet[0] = (byte) 0x02;
+        packet[1] = (byte) packetLength;
+        packet[2] = (byte) 0x00;
+        packet[3] = (byte) 0x04;
+        System.arraycopy(payload,0,packet,4,N);
+        packet[4+N] = (byte) 0x03;
+        appendCRC16(packet,packetLength-2);
+        return packet;
+    }
+
+    public static int computeCRC(byte[] data, int offset, int length) {
+        if (data == null || offset < 0 || offset > data.length - 1 || offset + length > data.length) {
+            return 0;
+        }
+
+        int crc = 0xFFFF;
+        for (int i = 0; i < length; ++i) {
+            crc ^= data[offset + i] << 8;
+            for (int j = 0; j < 8; ++j) {
+                crc = (crc & 0x8000) > 0 ? (crc << 1) ^ 0x1021 : crc << 1;
+            }
+        }
+        return crc & 0xFFFF;
+    }
+
+    private static int extractCRC(byte[] data){
+        return (int) (((data[data.length-1]<<8)&0xFF00) | (data[data.length-2]&0x00FF));
+    }
+    public static void appendCRC16(byte[] data, int length){
+        int crc = computeCRC(data,0,length);
+        data[length] = (byte) ((crc&0x00FF));
+        data[length+1]   = (byte) ((crc&0xFF00)>>8);
+    }
+
+    private static boolean checkCRC16(byte[] data){
+        int computedCRC = computeCRC(data,0,data.length-2);
+        int receivedCRC = extractCRC(data);
+        return receivedCRC==computedCRC;
+    }
+    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    private static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 }

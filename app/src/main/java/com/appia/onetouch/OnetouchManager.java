@@ -32,7 +32,7 @@ public class OnetouchManager extends BleManager<OnetouchCallbacks> implements Pr
 	private BluetoothGattCharacteristic mRxCharacteristic;
 	private BluetoothGattCharacteristic mTxCharacteristic;
 
-	private Protocol mProtocol = new Protocol(this);
+	private Protocol mProtocol = new Protocol(this,20);
 
 	/**
 	 * Onetouch Manager constructor
@@ -74,14 +74,24 @@ public class OnetouchManager extends BleManager<OnetouchCallbacks> implements Pr
 		@Override
 		protected void initialize() {
 			if(isConnected()) {
+				requestMtu(20+3)
+						.with((device, mtu) -> {
+							Log.i(TAG, "MTU set to " + mtu);
+						})
+						.fail((device, status) -> log(Log.WARN, "MTU change failed."))
+						.enqueue();
+
 				/* Register callback to get data from the device. */
 				setNotificationCallback(mTxCharacteristic)
 						.with((device, data) -> {
-							Log.v(TAG,  "NOTIFICATION: " + data.toString() + " received");
+							Log.v(TAG,  "BLE data received: " + data.toString());
 							mProtocol.onDataReceived(data.getValue());
 						});
 				enableNotifications(mTxCharacteristic)
-						.done(device -> Log.i(TAG, "Onetouch TX characteristic  notifications enabled"))
+						.done(device -> {
+							Log.i(TAG, "Onetouch TX characteristic  notifications enabled");
+							mProtocol.getTime();
+						})
 						.fail((device, status) -> {
 							Log.w(TAG, "Onetouch TX characteristic  notifications not enabled");
 						})
