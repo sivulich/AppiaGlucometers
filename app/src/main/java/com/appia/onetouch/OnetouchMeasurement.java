@@ -11,6 +11,12 @@ public class OnetouchMeasurement {
     public OnetouchMeasurement(){
 
     }
+    public OnetouchMeasurement(float aGlucose, Date aDate, String aId) {
+        mGlucose = aGlucose;
+        mDate = aDate;
+        mId = aId;
+    }
+
     public OnetouchMeasurement(float aGlucose, int aYear,
                                int aMonth, int aDay, int aHour, int aMin, String aId) {
         mGlucose = aGlucose;

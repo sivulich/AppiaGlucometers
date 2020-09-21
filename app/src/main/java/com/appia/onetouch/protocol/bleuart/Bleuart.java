@@ -122,10 +122,9 @@ public class Bleuart {
         }
         else{
             Log.d(TAG, mRxData.size() + " bytes received");
-
-            mCallbacks.onPacketReceived(mRxData.toByteArray());
             mTxData = null;
             mState = State.IDLE;
+            mCallbacks.onPacketReceived(mRxData.toByteArray());
         }
     }
 

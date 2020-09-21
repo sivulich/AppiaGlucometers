@@ -3,6 +3,7 @@ package com.appia.main;
 import android.R.drawable;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -33,6 +34,7 @@ import com.appia.bioland.R;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -161,8 +163,9 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchSer
 				progressBar.setVisibility(View.INVISIBLE);
 				ArrayList<OnetouchMeasurement> newMeasurements = mBinder.getMeasurements();
 				if (newMeasurements != null && newMeasurements.size()>0) {
-					mMeasArray.addAll(newMeasurements);
+					//Collections.reverse(newMeasurements);
 					for(int i=0; i<newMeasurements.size(); i++){
+						mMeasArray.insert(newMeasurements.get(i),0);
 						Log.d(TAG,"Measurement: " + newMeasurements.get(i));
 					}
 				}
@@ -293,6 +296,7 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchSer
 			mInflater = LayoutInflater.from(aContext);
 		}
 
+		@SuppressLint("SetTextI18n")
 		@Override
 		public View getView(int aPosition, View aConvertView, ViewGroup aParent) {
 
@@ -306,13 +310,15 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchSer
 			// Lookup view for data population
 			TextView time = view.findViewById(R.id.time);
 			TextView value = view.findViewById(R.id.value);
-			// Populate the data into the template view using the data object
+			TextView id = view.findViewById(R.id.id);
 
+			// Populate the data into the template view using the data object
 			DateFormat format = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT, Locale.getDefault());
 			String dateString = format.format(measurement.mDate);
 			time.setText(dateString);
 			value.setText(String.format(Locale.getDefault(),"%.2f",measurement.mGlucose));
-
+			String idString = "ID:" + measurement.mId;
+			id.setText(idString);
 			return view;
 
 		}
