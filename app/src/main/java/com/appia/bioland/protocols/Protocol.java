@@ -397,9 +397,6 @@ public abstract class Protocol {
             bytes[2] = packetCategory;
             return bytes;
         }
-
-
-
     }
 
     static public class DevicePacket extends ProtocolPacket{

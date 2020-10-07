@@ -1,7 +1,7 @@
-package com.appia.bioland;
+package com.appia.onetouch;
 
-import android.app.NotificationChannel;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothDevice;
@@ -9,30 +9,33 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.PowerManager;
-
-// TODO
-import android.media.AudioAttributes;
 import android.provider.Settings;
-
 import android.util.Log;
-
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import no.nordicsemi.android.ble.BleManager;
-
 import com.appia.Ble.BleProfileService;
-import com.appia.main.BiolandActivity;
+import com.appia.onetouch.OnetouchCallbacks;
+import com.appia.onetouch.OnetouchInfo;
+import com.appia.onetouch.OnetouchManager;
+import com.appia.onetouch.OnetouchMeasurement;
+import com.appia.bioland.R;
+import com.appia.main.OnetouchActivity;
 
 import java.util.ArrayList;
 
-public class BiolandService extends BleProfileService implements BiolandCallbacks {
+import no.nordicsemi.android.ble.BleManager;
 
-    private static final String TAG = "BiolandService";
+// TODO
+
+public class OnetouchService extends BleProfileService implements OnetouchCallbacks {
+
+    private static final String TAG = "OnetouchService";
 
     /* Notifications channel. */
     private static final String CHANNEL_ID = "channel_id";
@@ -40,47 +43,47 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     /**
      *  Measurement Broadcast!
      */
-    public static final String BROADCAST_COUNTDOWN = "com.appia.bioland.BROADCAST_COUNTDOWN";
-    public static final String EXTRA_COUNTDOWN = "com.appia.bioland.EXTRA_COUNTDOWN";
+    public static final String BROADCAST_COUNTDOWN = "com.appia.onetouch.BROADCAST_COUNTDOWN";
+    public static final String EXTRA_COUNTDOWN = "com.appia.onetouch.EXTRA_COUNTDOWN";
 
-    public static final String BROADCAST_MEASUREMENT = "com.appia.bioland.BROADCAST_MEASUREMENT";
-    public static final String EXTRA_GLUCOSE_LEVEL = "com.appia.bioland.EXTRA_GLUCOSE_LEVEL";
+    public static final String BROADCAST_MEASUREMENT = "com.appia.onetouch.BROADCAST_MEASUREMENT";
+    public static final String EXTRA_GLUCOSE_LEVEL = "com.appia.onetouch.EXTRA_GLUCOSE_LEVEL";
 
-    public static final String BROADCAST_INFORMATION = "com.appia.bioland.BROADCAST_INFORMATION";
-    public static final String EXTRA_BATTERY_CAPACITY = "com.appia.bioland.EXTRA_BATTERY_CAPACITY";
-    public static final String EXTRA_SERIAL_NUMBER = "com.appia.bioland.EXTRA_SERIAL_NUMBER";
+    public static final String BROADCAST_INFORMATION = "com.appia.onetouch.BROADCAST_INFORMATION";
+    public static final String EXTRA_BATTERY_CAPACITY = "com.appia.onetouch.EXTRA_BATTERY_CAPACITY";
+    public static final String EXTRA_SERIAL_NUMBER = "com.appia.onetouch.EXTRA_SERIAL_NUMBER";
 
 
-    public static final String BROADCAST_COMM_FAILED = "com.appia.bioland.BROADCAST_COMM_FAILED";
-    public static final String EXTRA_ERROR_MSG = "com.appia.bioland.EXTRA_ERROR_MSG";
+    public static final String BROADCAST_COMM_FAILED = "com.appia.onetouch.BROADCAST_COMM_FAILED";
+    public static final String EXTRA_ERROR_MSG = "com.appia.onetouch.EXTRA_ERROR_MSG";
 
     /**
      * Action send when user press the DISCONNECT button on the notification.
      */
-    public final static String ACTION_DISCONNECT = "com.appia.bioland.uart.ACTION_DISCONNECT";
+    public final static String ACTION_DISCONNECT = "com.appia.onetouch.uart.ACTION_DISCONNECT";
 
     /* Notification things...*/
     private final static int NOTIFICATION_ID = 349; // random
     private final static int OPEN_ACTIVITY_REQ = 67; // random
     private final static int DISCONNECT_REQ = 97; // random
 
-    /* Bioland manager. */
-    private BiolandManager mManager;
-    ArrayList<BiolandMeasurement> mMeasurements = new ArrayList<>();
-    BiolandInfo mInfo;
+    /* Onetouch manager. */
+    private OnetouchManager mManager;
+    ArrayList<OnetouchMeasurement> mMeasurements = new ArrayList<>();
+    OnetouchInfo mInfo;
 
     /* This binder is an interface for the binded activity to operate with the device. */
-    public class BiolandBinder extends LocalBinder {
+    public class OnetouchBinder extends LocalBinder {
         /**
          * Returns the measurements stored in the manager.
          */
-        public ArrayList<BiolandMeasurement> getMeasurements() {
-            ArrayList<BiolandMeasurement> ret = new ArrayList<>(mMeasurements);
+        public ArrayList<OnetouchMeasurement> getMeasurements() {
+            ArrayList<OnetouchMeasurement> ret = new ArrayList<>(mMeasurements);
             mMeasurements.clear();
             return ret;
         }
 
-        public BiolandInfo getDeviceInfo() {
+        public OnetouchInfo getDeviceInfo() {
            return mInfo;
         }
 
@@ -103,7 +106,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         }
     }
 
-    private final LocalBinder mBinder = new BiolandBinder();
+    private final LocalBinder mBinder = new OnetouchBinder();
 
     public void onCountdownReceived(int aCount) {
         final Intent broadcast = new Intent(BROADCAST_COUNTDOWN);
@@ -111,9 +114,9 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast);
     }
     /**
-     * Called by BiolandManager when all measurements were received.
+     * Called by OnetouchManager when all measurements were received.
      */
-    public void onMeasurementsReceived(ArrayList<BiolandMeasurement> aMeasurements) {
+    public void onMeasurementsReceived(ArrayList<OnetouchMeasurement> aMeasurements) {
 
         mMeasurements.addAll(aMeasurements);
 
@@ -127,9 +130,9 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     }
 
     /**
-     * Called by BiolandManager when device information is received..
+     * Called by OnetouchManager when device information is received..
      */
-    public void onDeviceInfoReceived(BiolandInfo aInfo) {
+    public void onDeviceInfoReceived(OnetouchInfo aInfo) {
         mInfo = aInfo;
 
         final Intent broadcast = new Intent(BROADCAST_INFORMATION);
@@ -139,7 +142,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     }
 
     /**
-     * Called by BiolandManager when an error has occured in the communication with the device.
+     * Called by OnetouchManager when an error has occured in the communication with the device.
      */
     public void onProtocolError(String aMessage) {
         final Intent broadcast = new Intent(BROADCAST_COMM_FAILED);
@@ -154,8 +157,8 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     }
 
     @Override
-    protected BleManager<BiolandCallbacks> initializeManager() {
-        return mManager = new BiolandManager(this);
+    protected BleManager<OnetouchCallbacks> initializeManager() {
+        return mManager = new OnetouchManager(this);
     }
 
     @Override
@@ -296,7 +299,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Bioland Service Channel",
+                    "Onetouch Service Channel",
                     NotificationManager.IMPORTANCE_HIGH
             );
             serviceChannel.setDescription(getString(R.string.channel_connected_devices_description));
@@ -316,9 +319,9 @@ public class BiolandService extends BleProfileService implements BiolandCallback
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
 
         if (pm != null && !pm.isInteractive()) {
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"BiolandAPP:"+TAG);
+            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK |PowerManager.ACQUIRE_CAUSES_WAKEUP |PowerManager.ON_AFTER_RELEASE,"OnetouchAPP:"+TAG);
             wl.acquire(10000);
-            PowerManager.WakeLock wl_cpu = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"BiolandAPP:"+TAG);
+            PowerManager.WakeLock wl_cpu = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"OnetouchAPP:"+TAG);
             wl_cpu.acquire(10000);
         }
     }
@@ -345,7 +348,7 @@ public class BiolandService extends BleProfileService implements BiolandCallback
     @SuppressWarnings("SameParameterValue")
     protected Notification createNotification(final int messageResId, boolean aVibrate, boolean aSound) {
 
-        final Intent intent = new Intent(this, BiolandActivity.class)
+        final Intent intent = new Intent(this, OnetouchActivity.class)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
         final PendingIntent pendingIntent = PendingIntent.getActivity(this, OPEN_ACTIVITY_REQ, intent, PendingIntent.FLAG_UPDATE_CURRENT);
