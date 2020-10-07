@@ -310,7 +310,7 @@ public class Protocol implements BleuartCallbacks {
                     " Time: " + new Date(1000*(long)aMeasTime).toString() +
                     " Error: " + aMeasError);
             Date date = new Date(1000*(long)aMeasTime);
-            mMeasurements.add(new OnetouchMeasurement(aMeasValue, date, Integer.toString(mHighestStoredMeasID)));
+            mMeasurements.add(new OnetouchMeasurement(aMeasValue, date, Integer.toString(mHighestStoredMeasID),aMeasError));
         }
         else{
             Log.d(TAG, "Measurement with ID: " + mHighestStoredMeasID + " was not found!");

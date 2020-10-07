@@ -296,7 +296,7 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchSer
 			mInflater = LayoutInflater.from(aContext);
 		}
 
-		@SuppressLint("SetTextI18n")
+		@SuppressLint({"SetTextI18n", "DefaultLocale"})
 		@Override
 		public View getView(int aPosition, View aConvertView, ViewGroup aParent) {
 
@@ -316,11 +316,21 @@ public class OnetouchActivity extends BleProfileServiceReadyActivity<OnetouchSer
 			DateFormat format = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT, Locale.getDefault());
 			String dateString = format.format(measurement.mDate);
 			time.setText(dateString);
-			value.setText(String.format(Locale.getDefault(),"%.2f",measurement.mGlucose));
-			String idString = "ID:" + measurement.mId;
-			id.setText(idString);
-			return view;
 
+			if(measurement.mErrorID==0) {
+				value.setText(String.format(Locale.getDefault(), "%.2f", measurement.mGlucose));
+				id.setText(String.format("ID: %s", measurement.mId));
+			}
+			else if(measurement.mErrorID==1280) {
+				value.setText(String.format(Locale.getDefault(), "%.2f", measurement.mGlucose));
+				id.setText(String.format("ID: %s HI", measurement.mId));
+			}
+			else{
+				value.setText("-");
+				id.setText(String.format("ID: %s ERROR CODE: %d", measurement.mId,measurement.mErrorID));
+			}
+
+			return view;
 		}
 	}
 
