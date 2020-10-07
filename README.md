@@ -70,7 +70,7 @@ To use the drivers you must provide the callbacks defined in BiolandCallbacks an
 The official documentation was used to implement protocols V1, V2, V3.1 and V3.2
 
 ## Onetouch Select Plus Flex
-Reverse engeenering was used to determine the protocol, the majority of the packets were identified, we attach the investigation files used to determine the meaning of each packet.
+Reverse engeenering was used to determine the protocol, the majority of the packets were identified, we attach the investigation files used to determine the meaning of each packet, ONETOUCH-20-001B-EN.pdf.
 
 # Licence
 Copyright 2020 Appia Care Inc., Tobías Lifchitz, Santiago Ivulich
